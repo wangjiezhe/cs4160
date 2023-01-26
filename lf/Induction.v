@@ -717,8 +717,8 @@ Fixpoint incr (m:bin) : bin :=
 Fixpoint bin_to_nat (m:bin) : nat :=
   match m with
   | Z => O
-  | B0 n => 2 * (bin_to_nat n)
-  | B1 n => 1 + 2 * (bin_to_nat n)
+  | B0 n => double (bin_to_nat n)
+  | B1 n => S (double (bin_to_nat n))
   end.
 
 (** In [Basics], we did some unit testing of [bin_to_nat], but we
@@ -745,12 +745,12 @@ Fixpoint bin_to_nat (m:bin) : nat :=
     to make the property easier to prove, feel free to do so! *)
 
 Theorem bin_to_nat_pres_incr : forall b : bin,
-  bin_to_nat (incr b) = 1 + bin_to_nat b.
+  bin_to_nat (incr b) = S (bin_to_nat b).
 Proof.
   induction b as [ | b' | b'].
   - reflexivity.
   - simpl. reflexivity.
-  - simpl. rewrite IHb'. simpl. rewrite <- plus_n_Sm. reflexivity.
+  - simpl. rewrite IHb'. simpl. reflexivity.
 Qed.
 
 (** [] *)
@@ -875,8 +875,8 @@ Abort.
 
 Fixpoint normalize (b:bin) : bin :=
   match b with
-  | Z | B0 Z => Z
-  | B0 n => B0 (normalize n)
+  | Z  => Z
+  | B0 n => double_bin (normalize n)
   | B1 n => B1 (normalize n)
   end.
 
@@ -884,7 +884,8 @@ Fixpoint normalize (b:bin) : bin :=
     [normalize] works the way you intend before you proceed. They won't be graded,
     but fill them in below. *)
 
-(* FILL IN HERE *)
+(* Compute normalize (B1 (B0 (B1 (B0 Z)))). *)
+(* ==> B1 (B0 (B1 Z)) : bin *)
 
 (** Finally, prove the main theorem. The inductive cases could be a
     bit tricky.
@@ -897,9 +898,28 @@ Fixpoint normalize (b:bin) : bin :=
     Hint 2: Lemma [double_incr_bin] that you proved above will be
     helpful, too.*)
 
+Lemma double_nat_bin : forall n, nat_to_bin (double n) = double_bin (nat_to_bin n).
+Proof.
+  induction n as [ | n'].
+  - reflexivity.
+  - simpl. rewrite IHn'. rewrite <- double_incr_bin. reflexivity.
+Qed.
+
+Lemma double_bin_incr : forall b, incr (double_bin b) = B1 b.
+Proof.
+  destruct b as [ | b' | b'].
+  - reflexivity.
+  - simpl. reflexivity.
+  - simpl. reflexivity.
+Qed.
+
 Theorem bin_nat_bin : forall b, nat_to_bin (bin_to_nat b) = normalize b.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction b as [ | b' | b'].
+  - reflexivity.
+  - simpl. rewrite <- IHb'. rewrite double_nat_bin. reflexivity.
+  - simpl. rewrite <- IHb'. rewrite double_nat_bin. rewrite double_bin_incr. reflexivity.
+Qed.
 
 (** [] *)
 
