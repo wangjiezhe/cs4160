@@ -13,3 +13,9 @@ opam switch create cs4160 ocaml-base-compiler.4.14.1
 opam install utop
 opam pin add coq 8.15.2
 ```
+
+## Coq Syntax
+
+- **Vernacular**: Check, Compute, Theroem, Lemma, Proof, Qed, ...
+- **Gallina**: match, if, forall, ...
+- **Ltac**: intros, simpl, reflexivity, destruct, induction, assert, replace, ...
