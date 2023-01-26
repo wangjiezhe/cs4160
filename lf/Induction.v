@@ -6,6 +6,7 @@
 (** Before getting started on this chapter, we need to import
     all of our definitions from the previous chapter: *)
 
+(* Print LoadPath. *)
 From LF Require Export Basics.
 
 (** For this [Require Export] command to work, Coq needs to be
@@ -917,8 +918,15 @@ Theorem bin_nat_bin : forall b, nat_to_bin (bin_to_nat b) = normalize b.
 Proof.
   induction b as [ | b' | b'].
   - reflexivity.
-  - simpl. rewrite <- IHb'. rewrite double_nat_bin. reflexivity.
-  - simpl. rewrite <- IHb'. rewrite double_nat_bin. rewrite double_bin_incr. reflexivity.
+  - simpl.
+    rewrite <- IHb'.
+    rewrite double_nat_bin.
+    reflexivity.
+  - simpl.
+    rewrite <- IHb'.
+    rewrite double_nat_bin.
+    rewrite double_bin_incr.
+    reflexivity.
 Qed.
 
 (** [] *)

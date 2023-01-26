@@ -10,8 +10,7 @@ Source Code: [clarksmr/sf-lectures](https://github.com/clarksmr/sf-lectures)
 
 ```
 opam switch create cs4160 ocaml-base-compiler.4.14.1
-opam install utop
-opam pin add coq 8.15.2
+opam install utop coq coq-lsp
 ```
 
 ## Coq Syntax
