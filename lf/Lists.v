@@ -496,7 +496,7 @@ Proof. reflexivity. Qed.
     Adding a value to a bag should increase the value's count by one.
     State this as a theorem and prove it. *)
 
-Theorem bag_theorem :
+Theorem add_inc_count :
   forall v l, count v (add v l) = S (count v l).
 Proof.
   intros v l.
@@ -1017,7 +1017,7 @@ Qed.
     Prove that [rev] is injective. Do not prove this by induction --
     that would be hard. Instead, re-use the same proof technique that
     you used for [involution_injective]. Do not try to use that
-    exercise as a lemma; the types are not the same. *)
+    exercise directly as a lemma: the types are not the same. *)
 
 Theorem rev_injective : forall (l1 l2 : natlist),
   rev l1 = rev l2 -> l1 = l2.
@@ -1236,4 +1236,4 @@ Inductive baz : Type :=
 
 (** [] *)
 
-(* 2022-06-16 11:18 *)
+(* 2022-08-08 17:13 *)

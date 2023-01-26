@@ -210,8 +210,9 @@ From Coq Require Export String.
 (* ================================================================= *)
 (** ** Booleans *)
 
-(** In a similar way, we can define the standard type [bool] of
-    booleans, with members [true] and [false]. *)
+(** Following the pattern of the days of the week above, we can
+    define the standard type [bool] of booleans, with members [true]
+    and [false]. *)
 
 Inductive bool : Type :=
   | true
@@ -1677,4 +1678,4 @@ Proof. reflexivity.  Qed.
     output.  But since they have to be graded by a human, the test
     script won't be able to tell you much about them.  *)
 
-(* 2022-06-16 11:18 *)
+(* 2022-08-08 17:13 *)
