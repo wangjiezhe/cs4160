@@ -5,10 +5,11 @@ ALLVFILES := \
 	Induction.v InductionTest.v \
 	Lists.v ListsTest.v \
 	Poly.v PolyTest.v \
-	Tactics.v TacticsTest.v
+	Tactics.v TacticsTest.v \
+	Logic.v LogicTest.v
 
-# Logic.v IndProp.v Maps.v ProofObjects.v IndPrinciples.v Rel.v Imp.v ImpParser.v ImpCEvalFun.v Extraction.v Auto.v AltAuto.v Postscript.v Bib.v
-# LogicTest.v  IndPropTest.v  MapsTest.v  ProofObjectsTest.v  IndPrinciplesTest.v  RelTest.v  ImpTest.v  ImpParserTest.v  ImpCEvalFunTest.v  ExtractionTest.v  AutoTest.v  AltAutoTest.v  PostscriptTest.v  BibTest.v
+# IndProp.v Maps.v ProofObjects.v IndPrinciples.v Rel.v Imp.v ImpParser.v ImpCEvalFun.v Extraction.v Auto.v AltAuto.v Postscript.v Bib.v
+# IndPropTest.v  MapsTest.v  ProofObjectsTest.v  IndPrinciplesTest.v  RelTest.v  ImpTest.v  ImpParserTest.v  ImpCEvalFunTest.v  ExtractionTest.v  AutoTest.v  AltAutoTest.v  PostscriptTest.v  BibTest.v
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
