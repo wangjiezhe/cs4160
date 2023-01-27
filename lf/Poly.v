@@ -1330,7 +1330,7 @@ Proof. reflexivity. Qed.
     Finding the right type can be tricky. *)
 
 Definition exp (n m : cnat) : cnat :=
-  fun (X: Type) (f : X -> X) (x : X) => (m (X->X) (fun g i => n X g i) f) x.
+  fun (X: Type) (f : X -> X) (x : X) => m (X->X) (fun g i => n X g i) f x.
 
 Example exp_1 : exp two two = plus two two.
 Proof. reflexivity. Qed.
