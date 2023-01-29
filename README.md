@@ -10,7 +10,7 @@ Source Code: [clarksmr/sf-lectures](https://github.com/clarksmr/sf-lectures)
 
 ```
 opam switch create cs4160 ocaml-base-compiler.4.14.1
-opam install utop coq coq-lsp ledit
+opam install utop coq coq-lsp
 ```
 
 ## Coq Syntax
@@ -18,7 +18,7 @@ opam install utop coq coq-lsp ledit
 - **Vernacular**:
   - Check, Compute, Search, Fail, Print, ...
   - Inductive, Definition, Fixpoint, Arguments, ...
-  - Theorem, Lemma, Example, Proof, Qed, Axiom, ...
+  - Theorem, Lemma, Example, Proof, Qed, Axiom, Conjecture, ...
   <!-- - False, True, I, ... -->
   - Module, End, Export, ...
 - **Gallina**:
