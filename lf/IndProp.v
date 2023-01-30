@@ -1188,18 +1188,34 @@ End R.
       is a subsequence of [l3], then [l1] is a subsequence of [l3]. *)
 
 Inductive subseq : list nat -> list nat -> Prop :=
-(* FILL IN HERE *)
+  | ss_nil : subseq [] []
+  | ss_cons_r l1 l2 n (H: subseq l1 l2) : subseq l1 (n :: l2)
+  | ss_cons_a l1 l2 n (H: subseq l1 l2) : subseq (n :: l1) (n :: l2)
 .
 
 Theorem subseq_refl : forall (l : list nat), subseq l l.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction l.
+  - apply ss_nil.
+  - apply ss_cons_a. apply IHl.
+Qed.
+
+Lemma subseq_empty : forall (l : list nat), subseq [] l.
+Proof.
+  intros. induction l.
+  - apply ss_nil.
+  - apply ss_cons_r. apply IHl.
+Qed.
 
 Theorem subseq_app : forall (l1 l2 l3 : list nat),
   subseq l1 l2 ->
   subseq l1 (l2 ++ l3).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction H as [ | l1 l2 n H IH | l1 l2 n H IH].
+  - simpl. apply subseq_empty.
+  - simpl. apply ss_cons_r. apply IH.
+  - simpl. apply ss_cons_a. apply IH.
+Qed.
 
 Theorem subseq_trans : forall (l1 l2 l3 : list nat),
   subseq l1 l2 ->
@@ -1208,7 +1224,14 @@ Theorem subseq_trans : forall (l1 l2 l3 : list nat),
 Proof.
   (* Hint: be careful about what you are doing induction on and which
      other things need to be generalized... *)
-  (* FILL IN HERE *) Admitted.
+  intros. generalize dependent l1.   (* Important! *)
+  induction H0.
+  - intros. apply H.
+  - intros. apply ss_cons_r. apply (IHsubseq _ H).
+  - intros. inversion H.
+    + apply ss_cons_r. apply (IHsubseq _ H3).
+    + apply ss_cons_a. apply (IHsubseq _ H3).
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (R_provability2)
@@ -1226,7 +1249,37 @@ Proof.
     - [R 1 [1;2;1;0]]
     - [R 6 [3;2;1;0]]  *)
 
-(* FILL IN HERE
+Module R2.
+
+Inductive R : nat -> list nat -> Prop :=
+  | c1                    : R 0     []
+  | c2 n l (H: R n     l) : R (S n) (n :: l)
+  | c3 n l (H: R (S n) l) : R n     l.
+
+Example ex1 : R 2 [1;0].
+Proof.
+  apply c2. apply c2. apply c1.
+Qed.
+
+Example ex2 : R 1 [1;2;1;0].
+Proof.
+  apply c3. apply c2.
+  apply c3. apply c3. apply c2.
+  apply c2. apply c2. apply c1.
+Qed.
+
+Example ex3 : R 6 [3;2;1;0].
+Abort.
+
+Example ex4 : R 3 [2;0].
+Proof.
+  apply c2.
+Abort.
+
+End R2.
+
+(* [R n l] which is provable requires [n <= S (hd l)] and [i <= (S j)]
+   where [i] and [j] are arbitrary neighbouring elements in [l].
 
     [] *)
 
@@ -1459,13 +1512,19 @@ Qed.
 Lemma empty_is_empty : forall T (s : list T),
   ~ (s =~ EmptySet).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros T s H.
+  inversion H.
+Qed.
 
 Lemma MUnion' : forall T (s : list T) (re1 re2 : reg_exp T),
   s =~ re1 \/ s =~ re2 ->
   s =~ Union re1 re2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  inversion H.
+  - apply (MUnionL _ _ _ H0).
+  - apply (MUnionR _ _ _ H0).
+Qed.
 
 (** The next lemma is stated in terms of the [fold] function from the
     [Poly] chapter: If [ss : list (list T)] represents a sequence of
@@ -1476,7 +1535,13 @@ Lemma MStar' : forall T (ss : list (list T)) (re : reg_exp T),
   (forall s, In s ss -> s =~ re) ->
   fold app ss [] =~ Star re.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  induction ss.
+  - simpl. apply MStar0.
+  - simpl. apply MStarApp.
+    + apply H. simpl. left. reflexivity.
+    + apply IHss. intros. apply H. simpl. right. apply H0.
+Qed.
 (** [] *)
 
 (** Since the definition of [exp_match] has a recursive
@@ -1565,13 +1630,47 @@ Qed.
     regular expression matches some string. Prove that your function
     is correct. *)
 
-Fixpoint re_not_empty {T : Type} (re : reg_exp T) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint re_not_empty {T : Type} (re : reg_exp T) : bool :=
+  match re with
+  | EmptySet => false
+  | EmptyStr | Char _ => true
+  | App r1 r2 => re_not_empty r1 && re_not_empty r2
+  | Union r1 r2 => re_not_empty r1 || re_not_empty r2
+  | Star r => true
+  end.
 
 Lemma re_not_empty_correct : forall T (re : reg_exp T),
   (exists s, s =~ re) <-> re_not_empty re = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  split.
+  - intros. induction re.
+    + inversion H. inversion H0.
+    + reflexivity.
+    + reflexivity.
+    + simpl.
+      (* Search (?x && ?y = true). *)
+      rewrite andb_true_iff. split.
+      * apply IHre1. inversion H. inversion H0. exists s1. apply H4.
+      * apply IHre2. inversion H. inversion H0. exists s2. apply H5.
+    + simpl. rewrite orb_true_iff. inversion H. inversion H0.
+      * left. apply IHre1. exists x. apply H3.
+      * right. apply IHre2. exists x. apply H3.
+    + reflexivity.
+  - intros. induction re.
+    + inversion H.
+    + exists []. apply MEmpty.
+    + exists [t]. apply MChar.
+    + inversion H. apply andb_true_iff in H1. inversion H1.
+      apply IHre1 in H0. apply IHre2 in H2.
+      inversion H0. inversion H2.
+      exists (x ++ x0). apply (MApp _ _ _ _ H3 H4).
+    + inversion H. apply orb_true_iff in H1. inversion H1.
+      * apply IHre1 in H0. inversion H0.
+        exists x. apply (MUnionL _ _ _ H2).
+      * apply IHre2 in H0. inversion H0.
+        exists x. apply (MUnionR _ _ _ H2).
+    + exists []. apply MStar0.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
