@@ -2667,7 +2667,7 @@ Qed.
     lists (with elements of type X) that have no elements in
     common. *)
 
-Definition disjoint (X: Type) (l1 l2 : list X) :=
+Definition disjoint {X: Type} (l1 l2 : list X) :=
   (forall x, In x l1 -> ~ (In x l2)) /\ (forall x, In x l2 -> ~ (In x l1)).
 
 (** Next, use [In] to define an inductive proposition [NoDup X
@@ -2677,16 +2677,16 @@ Definition disjoint (X: Type) (l1 l2 : list X) :=
     bool []] should be provable, while [NoDup nat [1;2;1]] and
     [NoDup bool [true;true]] should not be.  *)
 
-Inductive NoDup (X: Type) : list X ->Prop :=
-  | nodup_nil : NoDup X []
-  | nodup_cons x l (Hx: ~ (In x l)) (H: NoDup X l) : NoDup X (x :: l)
+Inductive NoDup {X: Type} : list X ->Prop :=
+  | nodup_nil : NoDup []
+  | nodup_cons x l (Hx: ~ (In x l)) (H: NoDup l) : NoDup (x :: l)
 .
 
 (** Finally, state and prove one or more interesting theorems relating
     [disjoint], [NoDup] and [++] (list append).  *)
 
 Theorem disjoint_app_nodup : forall (X: Type) (l1 l2 : list X),
-  disjoint X l1 l2 -> NoDup X l1 -> NoDup X l2 -> NoDup X (l1 ++ l2).
+  disjoint l1 l2 -> NoDup l1 -> NoDup l2 -> NoDup (l1 ++ l2).
 Proof.
   intros X l1 l2 H H1 H2.
   destruct H as [H H'].
@@ -2705,7 +2705,7 @@ Proof.
 Qed.
 
 Theorem nodup_app_disjoint : forall (X: Type) (l1 l2 : list X),
-  NoDup X (l1 ++ l2) -> disjoint X l1 l2.
+  NoDup (l1 ++ l2) -> disjoint l1 l2.
 Proof.
   intros.
   induction l1.
@@ -2741,13 +2741,20 @@ Lemma in_split : forall (X:Type) (x:X) (l:list X),
   In x l ->
   exists l1 l2, l = l1 ++ x :: l2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction l as [ | n' l'].
+  - inversion H.
+  - simpl in H. destruct H as [H | H].
+    + exists [], l'. simpl. rewrite H. reflexivity.
+    + apply IHl' in H. destruct H as [l1 [l2 H]].
+      exists (n'::l1), l2. rewrite H. simpl. reflexivity.
+Qed.
 
 (** Now define a property [repeats] such that [repeats X l] asserts
     that [l] contains at least one repeated element (of type [X]).  *)
 
 Inductive repeats {X:Type} : list X -> Prop :=
-  (* FILL IN HERE *)
+  | repeats_new x l (H: In x l) : repeats (x :: l)
+  | repeats_old y l (H: repeats l) : repeats (y :: l)
 .
 
 (* Do not modify the following line: *)
@@ -2771,8 +2778,249 @@ Theorem pigeonhole_principle: excluded_middle ->
   length l2 < length l1 ->
   repeats l1.
 Proof.
-  intros EM X l1. induction l1 as [|x l1' IHl1'].
-  (* FILL IN HERE *) Admitted.
+  intros EM X l1. induction l1 as [ |x l1' IHl1'].
+  - intros l2 Hin Hcp.
+    inversion Hcp.
+  - intros l2 Hin Hcp. simpl in *.
+    (* get a new list from [l2] with an [x] throwed away.
+       use [in_split]. *)
+    assert (H: In x l2).
+      { apply Hin. left. reflexivity. }
+    apply in_split in H as H'.
+    destruct H' as [l2' [l2'' H']].
+    apply (f_equal _ _ length) in H' as H''.
+    rewrite app_length in H''. simpl in H''.
+    replace (S (length l2'')) with (length l2'' + 1) in H''.
+    rewrite add_assoc in H''. rewrite <- app_length in H''.
+    rewrite add_comm in H''. simpl in H''.
+    rewrite H'' in Hcp. apply Sn_le_Sm__n_le_m in Hcp.
+    (* use excluded middle to decide which constructor should be used. *)
+    assert (Hem: In x l1' \/ ~ (In x l1')).
+    { apply EM. }
+    destruct Hem as [Ht | Hf].
+    + apply repeats_new. apply Ht.
+    + apply repeats_old.
+      apply IHl1' with (l2:=l2'++l2'').
+      * intros y H1. apply In_app_iff.
+        (* Search (?y -> ?x \/ ?y). *)
+        apply or_intro_l with (B:=x=y) in H1 as H1'.
+        apply or_commut in H1'.
+        apply Hin in H1'.
+        rewrite H' in H1'.
+        apply In_app_iff in H1'. simpl in H1'.
+        destruct H1' as [H1' | [H1' | H1']].
+        -- left. apply H1'.
+        -- rewrite H1' in Hf. apply Hf in H1. destruct H1.
+        -- right. apply H1'.
+      * apply Hcp.
+    + rewrite add_comm. reflexivity.
+Qed.
+
+(* Proof without [excluded_middle] hypothesis. *)
+(* 1. [In x l] for [x] which has arbitrary type is not decidable
+      without excluded middle. Nevertheless, [In x l] for [x : nat]
+      _is_ decidable, which can be proved with
+      [restricted_excluded_middle_eq].
+   2. Thus, we can turn [l1] in to a [nat] list [l1'].
+      Since all elements in [l1] occur in [l2], we can turn the
+      element in [l1] into the index of its first occurrence in [l2].
+   3. We cannot just find the index of an element in a list,
+      since we cannot compare two elements in an arbitrary type.
+      But if we know an index, we can take out the element in the
+      list with the right index.
+   4. We cannot _construct_ such a list, but we can prove its existence.
+   5. We need to find the equivalent version of [In] which use index
+      instead of compare elements directly, so we can avoid the
+      problem in 3. Both directions are needed, for we have to deal
+      with [In] in both evidence and consequence.
+   6. We also need to turn [in_split] into an indexed version.
+      Same reason with we did in 5. *)
+
+Lemma nat_in_or_not: forall (x : nat) (l : list nat),
+  In x l \/ ~ (In x l).
+Proof.
+  intros x l.
+  induction l.
+  - right. intros contra. destruct contra.
+  - simpl in *.
+    (* Search (?x \/ ~ ?x). *)
+    assert (Hem: x0 = x \/ x0 <> x).
+    { apply restricted_excluded_middle_eq. }
+    destruct Hem as [Hem | Hem].
+    + left. left. apply Hem.
+    + destruct IHl as [H | H].
+      * left. right. apply H.
+      * right. intro Hc. destruct Hc as [Hc | Hc].
+        -- apply Hem in Hc. destruct Hc.
+        -- apply H in Hc. destruct Hc.
+Qed.
+
+Fixpoint index {X:Type} (l:list X) (n:nat) (default:X) :=
+  match l with
+  | [] => default
+  | h :: t =>
+      match n with
+      | O => h
+      | S i => index t i default
+      end
+  end.
+
+Lemma in_to_index : forall {X:Type} x (l:list X) default,
+  In x l -> exists i, i < length l /\ index l i default = x.
+Proof.
+  intros X x l default H. induction l as [ | x' l'].
+  + inversion H.
+  + simpl in H. destruct H as [H | H].
+    * exists 0. simpl. split.
+      -- apply n_le_m__Sn_le_Sm. apply O_le_n.
+      -- rewrite H. reflexivity.
+    * apply IHl' in H. destruct H as [j [H1 H2]].
+      exists (S j). simpl. split.
+      -- apply (n_le_m__Sn_le_Sm _ _ H1).
+      -- apply H2.
+Qed.
+
+Lemma index_to_in : forall {X:Type} (l:list X) (n:nat) default,
+  n < length l -> In (index l n default) l.
+Proof.
+  intros X l. induction l as [ | x' l'].
+  - intros n d H. inversion H.
+  - intros n d H. destruct n.
+    + simpl. left. reflexivity.
+    + simpl. right. apply IHl'. simpl in H.
+      apply (Sn_le_Sm__n_le_m _ _ H).
+Qed.
+
+Lemma in_to_nat_list :
+  forall (X:Type) (l1  l2:list X) (default:X),
+  (forall x, In x l1 -> In x l2) ->
+  exists (l:list nat), length l = length l1 /\
+    (forall (i:nat),
+      i < length l ->
+      (index l1 i default = index l2 (index l i 0) default) /\
+      index l i 0 < length l2).
+Proof.
+  induction l1 as [ | x' l1'].
+  - intros l2 default H. exists []. split.
+    + reflexivity.
+    + intros i contra. inversion contra.
+  - intros l2 default H. simpl in H.
+    (* just use [assert] to destruct H ! *)
+    assert (H1: In x' l2).
+      { apply H. left. reflexivity. }
+    assert (H2: forall x, In x l1' -> In x l2).
+      { intros x H2'. apply H. right. apply H2'. }
+    (* convert [In] to the indexed equivalent. *)
+    apply in_to_index with (default:=default) in H1 as H1'.
+    destruct H1' as [j [H1' H1'']].
+    apply IHl1' with (default:=default) in H2 as H2'.
+    destruct H2' as [l [H2' H2'']].
+    exists (j :: l). split.
+    + simpl. f_equal. apply H2'.
+    + intros i H3. destruct i.
+      * simpl. rewrite H1''. split. reflexivity. apply H1'.
+      * simpl. apply H2''. simpl in H3.
+        apply (Sn_le_Sm__n_le_m _ _ H3).
+Qed.
+
+Fixpoint remove_index {X:Type} (l:list X) (i:nat) :=
+  match l with
+  | [] => []
+  | h :: t =>
+      match i with
+      | O => t
+      | S n => h :: remove_index t n
+      end
+  end.
+
+(* [remove_index l n] just remove [n]th element, others are
+   still there. *)
+Theorem remove_index_in : forall {X:Type} (l:list X) (j k:nat) (default:X),
+  k < length l -> j < length l -> k <> j ->
+  In (index l k default) (remove_index l j)
+.
+Proof.
+  intros X. induction l as [ | x' l'].
+  - intros j k d Hk Hj Hkj. inversion Hk.
+  - intros j k d Hk Hj Hkj.
+    destruct k, j.
+    + destruct Hkj. reflexivity.
+    + simpl. left. reflexivity.
+    + simpl. apply index_to_in. simpl in Hk.
+      apply (Sn_le_Sm__n_le_m _ _ Hk).
+    + simpl in *. right. apply IHl'.
+      apply (Sn_le_Sm__n_le_m _ _ Hk).
+      apply (Sn_le_Sm__n_le_m _ _ Hj).
+      intro. destruct Hkj. f_equal. apply H.
+Qed.
+
+Theorem remove_index_length : forall {X:Type} (l:list X) (i:nat),
+  i < length l -> length l = S (length (remove_index l i))
+.
+Proof.
+  intros X. induction l.
+  - intros i H. inversion H.
+  - intros i H. destruct i.
+    + simpl. reflexivity.
+    + simpl. f_equal. apply IHl. simpl in H.
+      apply (Sn_le_Sm__n_le_m _ _ H).
+Qed.
+
+Theorem pigeonhole_principle_no_em:
+  forall (X:Type) (l1  l2:list X),
+  (forall x, In x l1 -> In x l2) ->
+  length l2 < length l1 ->
+  repeats l1.
+Proof.
+  intros X l1. induction l1 as [ |x' l1' IHl1].
+  - intros l2 Hin Hcp.
+    inversion Hcp.
+  - intros l2 Hin Hcp. simpl in *.
+    (* destruct [Hin] manually. *)
+    assert (H1: In x' l2).
+      { apply Hin. left. reflexivity. }
+    assert (H2: forall x, In x l1' -> In x l2).
+      { intros x H. apply Hin. simpl. right. apply H. }
+    (* destruct [In] in [H1] and [H2] into indexed version. *)
+    apply in_to_index with (default:=x') in H1 as H1'.
+    destruct H1' as [j [H1_1 H1_2]].
+    apply in_to_nat_list with (default:=x') in H2 as H2'.
+    destruct H2' as [lnat [H2_1 H2_2]].
+    (* use restricted excluded middle. *)
+    assert (Hem: In j lnat \/ ~ (In j lnat)).
+      { apply nat_in_or_not. }
+    destruct Hem as [Ht | Hf].
+    + (* [In j lnat], i.e. [In x' l1']. *)
+      apply repeats_new.
+      apply in_to_index with (default:=0) in Ht as Ht'.
+      destruct Ht' as [k [Ht_1 Ht_2]].
+      apply H2_2 in Ht_1 as Ht_1'.
+      rewrite Ht_2 in Ht_1'.
+      rewrite H1_2 in Ht_1'.
+      destruct Ht_1' as [Ht_1' Ht_1''].
+      rewrite <- Ht_1'.
+      apply index_to_in. rewrite <- H2_1. apply Ht_1.
+    + (* [~ (In j lnat)], i.e. [~ (In x' l1')]. *)
+      apply repeats_old.
+      remember (remove_index l2 j) as l2'.
+      apply IHl1 with (l2:=l2').
+      intros x H3.
+      apply in_to_index with (default:=x') in H3 as H3'.
+      destruct H3' as [k [H3_1 H3_2]].
+      rewrite <- H2_1 in H3_1.
+      apply H2_2 in H3_1 as H3_1'.
+      rewrite H3_2 in H3_1'.
+      destruct H3_1' as [H3_1' H3_1''].
+      rewrite H3_1'. rewrite Heql2'.
+      apply remove_index_in.
+      * apply H3_1''.
+      * apply H1_1.
+      * intro H. rewrite <- H in Hf. destruct Hf.
+        apply index_to_in. apply H3_1.
+      * rewrite remove_index_length with (i:=j) in Hcp.
+        rewrite Heql2'. apply (Sn_le_Sm__n_le_m _ _ Hcp).
+        apply H1_1.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
