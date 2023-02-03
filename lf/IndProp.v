@@ -3426,15 +3426,6 @@ Proof. reflexivity. Qed.
     regex's (e.g., [s =~ re0 \/ s =~ re1]) using lemmas given above
     that are logical equivalences. You can then reason about these
     [Prop]'s naturally using [intro] and [destruct]. *)
-
-Lemma match_eps_iff : forall re, [ ] =~ re <-> match_eps re = true.
-Proof.
-  intros. apply reflect_iff.
-  assert (HY: refl_matches_eps match_eps).
-    { apply match_eps_refl. }
-  unfold refl_matches_eps in HY. apply HY.
-Qed.
-
 Lemma derive_corr : derives derive.
 Proof.
   unfold derives. unfold is_der.
@@ -3452,7 +3443,7 @@ Proof.
       destruct (match_eps_refl re1).
       * apply union_disj.
         destruct s1 as [ | a' s1'].
-        -- right. apply IHexp_match2. apply Heqs'.
+        -- right. apply (IHexp_match2 _ Heqs').
         -- left. simpl in Heqs'. inversion Heqs'.
            apply MApp.
            apply IHexp_match1. rewrite H3. reflexivity.
@@ -3464,67 +3455,52 @@ Proof.
            apply IHexp_match1. rewrite H3. reflexivity.
            apply H0.
     + intros. cbn. apply union_disj.
-      left. apply IHexp_match. apply Heqs'.
+      left. apply (IHexp_match _ Heqs').
     + intros. cbn. apply union_disj.
-      right. apply IHexp_match. apply Heqs'.
+      right. apply (IHexp_match _ Heqs').
     + intros. inversion Heqs'.
     + intros. destruct s1 as [ | a' s1'].
-      * apply IHexp_match2. apply Heqs'.
+      * apply (IHexp_match2 _ Heqs').
       * inversion Heqs'.
         cbn. apply MApp.
         apply IHexp_match1. rewrite H2. reflexivity.
         apply H0.
-  - intros.
-    remember (derive a re) as re'.
-    remember s as s'.
-    (* generalize dependent re. *)
-    generalize dependent s.
-    induction H.
-    + intros. destruct re.
-      * discriminate.
-      * discriminate.
-      * inversion Heqre'.
-        destruct (eqb a t) eqn:Hat.
-        -- apply eqb_eq in Hat. rewrite Hat. apply MChar.
-        -- discriminate.
-      * inversion Heqre'.
-        destruct (match_eps_refl re1).
-        -- discriminate.
-        -- discriminate.
-      * discriminate.
-      * discriminate.
-    + intros. destruct re.
-      * discriminate.
-      * discriminate.
-      * inversion Heqre'.
-        destruct (eqb a t) eqn:Hat.
-        -- discriminate.
-        -- discriminate.
-      * inversion Heqre'.
-        destruct (match_eps_refl re1).
-        -- discriminate.
-        -- discriminate.
-      * discriminate.
-      * discriminate.
-    + intros. destruct re.
-      * discriminate.
-      * discriminate.
-      * inversion Heqre'.
-        destruct (eqb a t) eqn:Hat.
-        -- discriminate.
-        -- discriminate.
-      * inversion Heqre'.
-        destruct (match_eps_refl re3).
-        -- discriminate.
-        -- inversion H2.
-           admit.
-
-
-
-
-
-
-  (* FILL IN HERE *) Admitted.
+  - generalize dependent s.
+    induction re.
+    + intros. inversion H.
+    + intros. inversion H.
+    + intros. cbn in H.
+      destruct (eqb a t) eqn:Hat.
+      * apply eqb_eq in Hat. inversion H.
+        rewrite Hat. apply MChar.
+      * inversion H.
+    + intros. cbn in H.
+      destruct (match_eps_refl re1).
+      * apply union_disj in H.
+        destruct H as [H | H].
+        -- apply app_exists in H.
+           destruct H as [s1 [s2 [H [H1 H2]]]].
+           apply IHre1 in H1.
+           rewrite H.
+           apply (MApp _ _ _ _ H1 H2).
+        -- apply IHre2 in H.
+           apply (MApp _ _ _ _ H0 H).
+      * apply app_exists in H.
+        destruct H as [s1 [s2 [H [H1 H2]]]].
+        apply IHre1 in H1.
+        rewrite H.
+        apply (MApp _ _ _ _ H1 H2).
+    + intros. cbn in H.
+      apply union_disj in H.
+      destruct H as [H | H].
+      * apply (MUnionL _ _ _ (IHre1 _ H)).
+      * apply (MUnionR _ _ _ (IHre2 _ H)).
+    + intros. cbn in H.
+      apply app_exists in H.
+      destruct H as [s1 [s2 [H [H1 H2]]]].
+      rewrite H.
+      apply (MStarApp _ _ _ (IHre _ H1) H2).
+Qed.
 (** [] *)
 
 (** We'll define the regex matcher using [derive]. However, the only
@@ -3541,8 +3517,11 @@ Definition matches_regex m : Prop :=
 
     Complete the definition of [regex_match] so that it matches
     regexes. *)
-Fixpoint regex_match (s : string) (re : reg_exp ascii) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint regex_match (s : string) (re : reg_exp ascii) : bool :=
+  match s with
+  | [] => match_eps re
+  | h :: t => regex_match t (derive h re)
+  end.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (regex_match_correct)
@@ -3560,7 +3539,17 @@ Fixpoint regex_match (s : string) (re : reg_exp ascii) : bool
     [s =~ derive x re], and vice versa. *)
 Theorem regex_match_correct : matches_regex regex_match.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold matches_regex.
+  intros. apply iff_reflect.
+  generalize dependent re.
+  induction s.
+  - intros. apply reflect_iff. apply match_eps_refl.
+  - intros. cbn.
+    destruct (derive_corr x re) with (s:=s) as [H1 H2].
+    split.
+    + intros. apply IHs. apply H1. apply H.
+    + intros. apply H2. apply IHs. apply H.
+Qed.
 (** [] *)
 
 (* 2022-08-08 17:13 *)
