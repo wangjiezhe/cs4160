@@ -463,13 +463,25 @@ Admitted.
     it is sound.  Use the tacticals we've just seen to make the proof
     as short and elegant as possible. *)
 
-Fixpoint optimize_0plus_b (b : bexp) : bexp
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint optimize_0plus_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_0plus a1) (optimize_0plus a2)
+  | BNeq a1 a2 => BNeq (optimize_0plus a1) (optimize_0plus a2)
+  | BLe a1 a2 => BLe (optimize_0plus a1) (optimize_0plus a2)
+  | BGt a1 a2 => BGt (optimize_0plus a1) (optimize_0plus a2)
+  | BNot b => BNot (optimize_0plus_b b)
+  | BAnd b1 b2 => BAnd (optimize_0plus_b b1) (optimize_0plus_b b2)
+  end.
 
 Theorem optimize_0plus_b_sound : forall b,
   beval (optimize_0plus_b b) = beval b.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_0plus_sound; reflexivity).
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, standard, optional (optimize)
@@ -482,9 +494,211 @@ Proof.
     optimization and its correctness proof -- and build up
     incrementally to something more interesting.)  *)
 
-(* FILL IN HERE
+Fixpoint optimize_plus0 (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus e1 (ANum 0) => optimize_plus0 e1
+  | APlus  e1 e2 => APlus  (optimize_plus0 e1) (optimize_plus0 e2)
+  | AMinus e1 e2 => AMinus (optimize_plus0 e1) (optimize_plus0 e2)
+  | AMult  e1 e2 => AMult  (optimize_plus0 e1) (optimize_plus0 e2)
+  end.
 
-    [] *)
+Theorem optimize_plus0_a_sound : forall a,
+  aeval (optimize_plus0 a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a2;
+    try (simpl; simpl in IHa2; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; rewrite IHa1; try (symmetry; apply add_0_r); reflexivity).
+Qed.
+
+Fixpoint optimize_minus0 (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus  e1 e2 => APlus  (optimize_minus0 e1) (optimize_minus0 e2)
+  | AMinus e1 (ANum 0) => optimize_minus0 e1
+  | AMinus e1 e2 => AMinus (optimize_minus0 e1) (optimize_minus0 e2)
+  | AMult  e1 e2 => AMult  (optimize_minus0 e1) (optimize_minus0 e2)
+  end.
+
+Theorem optimize_minus0_a_sound : forall a,
+  aeval (optimize_minus0 a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a2;
+    try (simpl; simpl in IHa2; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; rewrite IHa1; try (symmetry; apply sub_0_r); reflexivity).
+Qed.
+
+Fixpoint optimize_0mult (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus  e1 e2 => APlus  (optimize_0mult e1) (optimize_0mult e2)
+  | AMinus e1 e2 => AMinus (optimize_0mult e1) (optimize_0mult e2)
+  | AMult (ANum 0) _ => ANum 0
+  | AMult  e1 e2 => AMult  (optimize_0mult e1) (optimize_0mult e2)
+  end.
+
+Theorem optimize_0mult_a_sound : forall a,
+  aeval (optimize_0mult a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a1;
+    try (simpl; simpl in IHa1; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; try rewrite IHa2; reflexivity).
+Qed.
+
+Fixpoint optimize_mult0 (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus  e1 e2 => APlus  (optimize_mult0 e1) (optimize_mult0 e2)
+  | AMinus e1 e2 => AMinus (optimize_mult0 e1) (optimize_mult0 e2)
+  | AMult _ (ANum 0) => ANum 0
+  | AMult  e1 e2 => AMult  (optimize_mult0 e1) (optimize_mult0 e2)
+  end.
+
+Theorem optimize_mult0_a_sound : forall a,
+  aeval (optimize_mult0 a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a2;
+    try (simpl; simpl in IHa2; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; try rewrite IHa1; try (symmetry; rewrite mul_0_r); reflexivity).
+Qed.
+
+Definition optimize_a (a:aexp) : aexp :=
+  optimize_mult0
+   (optimize_0mult
+    (optimize_minus0
+      (optimize_plus0
+        (optimize_0plus a)))).
+
+Theorem optimize_a_sound : forall a,
+  aeval (optimize_a a) = aeval a.
+Proof.
+  intros. unfold optimize_a.
+  rewrite optimize_mult0_a_sound.
+  rewrite optimize_0mult_a_sound.
+  rewrite optimize_minus0_a_sound.
+  rewrite optimize_plus0_a_sound.
+  apply optimize_0plus_sound.
+Qed.
+
+Fixpoint optimize_plus0_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_0plus a1) (optimize_0plus a2)
+  | BNeq a1 a2 => BNeq (optimize_0plus a1) (optimize_0plus a2)
+  | BLe a1 a2 => BLe (optimize_0plus a1) (optimize_0plus a2)
+  | BGt a1 a2 => BGt (optimize_0plus a1) (optimize_0plus a2)
+  | BNot b => BNot (optimize_plus0_b b)
+  | BAnd b1 b2 => BAnd (optimize_plus0_b b1) (optimize_plus0_b b2)
+  end.
+
+Theorem optimize_plus0_b_sound : forall b,
+  beval (optimize_plus0_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_0plus_sound; reflexivity).
+Qed.
+
+Fixpoint optimize_minus0_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_minus0 a1) (optimize_minus0 a2)
+  | BNeq a1 a2 => BNeq (optimize_minus0 a1) (optimize_minus0 a2)
+  | BLe a1 a2 => BLe (optimize_minus0 a1) (optimize_minus0 a2)
+  | BGt a1 a2 => BGt (optimize_minus0 a1) (optimize_minus0 a2)
+  | BNot b => BNot (optimize_minus0_b b)
+  | BAnd b1 b2 => BAnd (optimize_minus0_b b1) (optimize_minus0_b b2)
+  end.
+
+Theorem optimize_minus0_b_sound : forall b,
+  beval (optimize_minus0_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_minus0_a_sound; reflexivity).
+Qed.
+
+Fixpoint optimize_0mult_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_0mult a1) (optimize_0mult a2)
+  | BNeq a1 a2 => BNeq (optimize_0mult a1) (optimize_0mult a2)
+  | BLe a1 a2 => BLe (optimize_0mult a1) (optimize_0mult a2)
+  | BGt a1 a2 => BGt (optimize_0mult a1) (optimize_0mult a2)
+  | BNot b => BNot (optimize_0mult_b b)
+  | BAnd b1 b2 => BAnd (optimize_0mult_b b1) (optimize_0mult_b b2)
+  end.
+
+Theorem optimize_0mult_b_sound : forall b,
+  beval (optimize_0mult_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_0mult_a_sound; reflexivity).
+Qed.
+
+Fixpoint optimize_mult0_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_mult0 a1) (optimize_mult0 a2)
+  | BNeq a1 a2 => BNeq (optimize_mult0 a1) (optimize_mult0 a2)
+  | BLe a1 a2 => BLe (optimize_mult0 a1) (optimize_mult0 a2)
+  | BGt a1 a2 => BGt (optimize_mult0 a1) (optimize_mult0 a2)
+  | BNot b => BNot (optimize_mult0_b b)
+  | BAnd b1 b2 => BAnd (optimize_mult0_b b1) (optimize_mult0_b b2)
+  end.
+
+Theorem optimize_mult0_b_sound : forall b,
+  beval (optimize_mult0_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_mult0_a_sound; reflexivity).
+Qed.
+
+Definition optimize_b (b:bexp) : bexp :=
+  optimize_mult0_b
+   (optimize_0mult_b
+    (optimize_minus0_b
+      (optimize_plus0_b
+        (optimize_0plus_b b)))).
+
+Theorem optimize_b_sound : forall b,
+  beval (optimize_b b) = beval b.
+Proof.
+  intros. unfold optimize_b.
+  rewrite optimize_mult0_b_sound.
+  rewrite optimize_0mult_b_sound.
+  rewrite optimize_minus0_b_sound.
+  rewrite optimize_plus0_b_sound.
+  apply optimize_0plus_b_sound.
+Qed.
+
+(* [] *)
 
 (* ================================================================= *)
 (** ** Defining New Tactics *)
