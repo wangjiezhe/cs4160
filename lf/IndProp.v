@@ -3349,7 +3349,7 @@ Fixpoint derive (a : ascii) (re : reg_exp ascii) : reg_exp ascii :=
   | EmptySet => EmptySet
   | EmptyStr => EmptySet
   | Char t =>
-      if eqb a t
+      if (a =? t)%char
       then EmptyStr
       else EmptySet
   | App r1 r2 =>
@@ -3436,9 +3436,9 @@ Proof.
     induction H.
     + intros. inversion Heqs'.
     + intros. inversion Heqs'.
-      simpl. destruct (eqb a a) eqn:Haa.
+      simpl. destruct (eqb_spec a a).
       * apply MEmpty.
-      * apply eqb_neq in Haa. destruct Haa. reflexivity.
+      * destruct n. reflexivity.
     + intros. cbn.
       destruct (match_eps_refl re1).
       * apply union_disj.
@@ -3470,9 +3470,9 @@ Proof.
     + intros. inversion H.
     + intros. inversion H.
     + intros. cbn in H.
-      destruct (eqb a t) eqn:Hat.
-      * apply eqb_eq in Hat. inversion H.
-        rewrite Hat. apply MChar.
+      destruct (eqb_spec a t).
+      * inversion H.
+        rewrite e. apply MChar.
       * inversion H.
     + intros. cbn in H.
       destruct (match_eps_refl re1).
