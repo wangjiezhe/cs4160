@@ -105,13 +105,23 @@ Proof.
 (** Copy the definition of [total_relation] from your [IndProp]
     here so that this file can be graded on its own.  *)
 Inductive total_relation : nat -> nat -> Prop :=
-  (* FILL IN HERE *)
+  | tr_n (n : nat) : total_relation n n
+  | tr_Sl (n m : nat) (H : total_relation n m) : total_relation (S n) m
+  | tr_Sr (n m : nat) (H : total_relation n m) : total_relation n (S m)
 .
 
 Theorem total_relation_not_partial_function :
   ~ (partial_function total_relation).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold partial_function. intros Hc.
+  assert (0=1) as Nonsense.
+  {
+    apply Hc with (x:=0).
+    apply tr_n.
+    apply tr_Sr. apply tr_n.
+  }
+  discriminate Nonsense.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (empty_relation_partial_function)
@@ -122,13 +132,35 @@ Proof.
 (** Copy the definition of [empty_relation] from your [IndProp]
     here so that this file can be graded on its own.  *)
 Inductive empty_relation : nat -> nat -> Prop :=
-  (* FILL IN HERE *)
+  | er_Sl (n m : nat) (H : empty_relation n m) : empty_relation (S n) m
+  | er_Sr (n m : nat) (H : empty_relation n m) : empty_relation n (S m)
 .
+
+Theorem empty_relation_is_empty : forall n m, ~ empty_relation n m.
+  Proof.
+    intros n m ER.
+    induction n.
+    - induction m.
+      + inversion ER.
+      + inversion ER. apply (IHm H1).
+    - induction m.
+      + inversion ER. apply (IHn H0).
+      + inversion ER.
+        * apply (IHn H0).
+        * destruct IHm.
+          -- apply H1.
+          -- intros. destruct IHn. apply (er_Sr n m ER0).
+Qed.
 
 Theorem empty_relation_partial_function :
   partial_function empty_relation.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold partial_function.
+  intros x y1 y2 H1 H2.
+  assert (~ empty_relation x y1) as H1'.
+    { apply empty_relation_is_empty. }
+  destruct (H1' H1).
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -183,8 +215,10 @@ Proof.
   (* Prove this by induction on evidence that [m] is less than [o]. *)
   unfold lt. unfold transitive.
   intros n m o Hnm Hmo.
-  induction Hmo as [| m' Hm'o].
-    (* FILL IN HERE *) Admitted.
+  induction Hmo as [ | m' Hm'o].
+  - apply le_S. apply Hnm.
+  - apply le_S. apply IHHm'o.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (lt_trans'')
@@ -196,8 +230,12 @@ Theorem lt_trans'' :
 Proof.
   unfold lt. unfold transitive.
   intros n m o Hnm Hmo.
-  induction o as [| o'].
-  (* FILL IN HERE *) Admitted.
+  induction o as [ | o'].
+  - inversion Hmo.
+  - apply n_le_m__Sn_le_Sm. apply Sn_le_Sm__n_le_m in Hmo.
+    apply n_lt_m__n_le_m in Hnm.
+    apply (le_trans _ _ _ Hnm Hmo).
+Qed.
 (** [] *)
 
 (** The transitivity of [le], in turn, can be used to prove some facts
@@ -215,7 +253,8 @@ Qed.
 Theorem le_S_n : forall n m,
   (S n <= S m) -> (n <= m).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. apply Sn_le_Sm__n_le_m. apply H.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (le_Sn_n_inf)
@@ -236,7 +275,11 @@ Proof.
 Theorem le_Sn_n : forall n,
   ~ (S n <= n).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n Hc.
+  induction n.
+  - inversion Hc.
+  - apply (IHn (le_S_n _ _ Hc)).
+Qed.
 (** [] *)
 
 (** Reflexivity and transitivity are the main concepts we'll need for
@@ -255,7 +298,10 @@ Definition symmetric {X: Type} (R: relation X) :=
 Theorem le_not_symmetric :
   ~ (symmetric le).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold symmetric. intros Hc.
+  assert (0<=1) as H. { apply le_S. apply le_n. }
+  apply Hc in H. inversion H.
+Qed.
 (** [] *)
 
 (** A relation [R] is _antisymmetric_ if [R a b] and [R b a] together
@@ -269,7 +315,14 @@ Definition antisymmetric {X: Type} (R: relation X) :=
 Theorem le_antisymmetric :
   antisymmetric le.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold antisymmetric.
+  induction a.
+  - intros. inversion H0. reflexivity.
+  - intros. destruct b.
+    + inversion H.
+    + f_equal. apply le_S_n in H. apply le_S_n in H0.
+      apply (IHa _ H H0).
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (le_step) *)
@@ -278,7 +331,8 @@ Theorem le_step : forall n m p,
   m <= S p ->
   n <= p.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. apply le_S_n. apply (le_trans _ _ _ H H0).
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -394,7 +448,15 @@ Lemma rsc_trans :
       clos_refl_trans_1n R y z ->
       clos_refl_trans_1n R x z.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros X R x y z Hxy Hyz.
+  generalize dependent z.
+  induction Hxy as [ | x y z Hxy Hrest].
+  - intros. apply Hyz.
+  - intros t Hzt.
+    apply rt1n_trans with y.
+    + apply Hxy.
+    + apply IHHrest. apply Hzt.
+Qed.
 (** [] *)
 
 (** Then we use these facts to prove that the two definitions of
@@ -406,7 +468,19 @@ Theorem rtc_rsc_coincide :
   forall (X:Type) (R: relation X) (x y : X),
     clos_refl_trans R x y <-> clos_refl_trans_1n R x y.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. split.
+  - intros. induction H.
+    + apply rt1n_trans with y. apply H. apply rt1n_refl.
+    + apply rt1n_refl.
+    + apply rsc_trans with y.
+      * apply IHclos_refl_trans1.
+      * apply IHclos_refl_trans2.
+  - intros. induction H.
+    + apply rt_refl.
+    + apply rt_trans with y.
+      * apply rt_step. apply Hxy.
+      * apply IHclos_refl_trans_1n.
+Qed.
 (** [] *)
 
 (* 2022-08-08 17:13 *)
