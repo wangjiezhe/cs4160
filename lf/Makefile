@@ -9,10 +9,11 @@ ALLVFILES := \
 	Logic.v LogicTest.v \
 	IndProp.v IndPropTest.v \
 	ProofObjects.v ProofObjectsTest.v \
-	Rel.v RelTest.v
+	Rel.v RelTest.v \
+	Maps.v MapsTest.v
 
-# Maps.v IndPrinciples.v Imp.v ImpParser.v ImpCEvalFun.v Extraction.v Auto.v AltAuto.v Postscript.v
-# MapsTest.v IndPrinciplesTest.v ImpTest.v ImpParserTest.v ImpCEvalFunTest.v ExtractionTest.v AutoTest.v AltAutoTest.v PostscriptTest.v
+# IndPrinciples.v Imp.v ImpParser.v ImpCEvalFun.v Extraction.v Auto.v AltAuto.v
+# IndPrinciplesTest.v ImpTest.v ImpParserTest.v ImpCEvalFunTest.v ExtractionTest.v AutoTest.v AltAutoTest.v
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
