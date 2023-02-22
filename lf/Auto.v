@@ -227,7 +227,7 @@ Hint Unfold is_fortytwo : core.
 Example auto_example_7' : forall x,
   (x <= 42 /\ 42 <= x) -> is_fortytwo x.
 Proof.
-  auto. (* try also: info_auto. *)
+  info_auto. (* try also: info_auto. *)
 Qed.
 
 (** (Note that the [Hint Unfold is_fortytwo] command above the
@@ -686,6 +686,7 @@ Proof.
     proof obligations but along the way we've put some aside to be
     done later, and we have not finished those.  Trying to close the
     proof with [Qed] would yield an error. (Try it!) *)
+  Unshelve.
 Abort.
 
 (** An additional constraint is that existential variables cannot be
