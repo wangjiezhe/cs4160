@@ -1905,7 +1905,7 @@ Proof. imp_intuition. Qed.
     and" connective, aka _Sheffer stroke_. *)
 
 Inductive nand (P Q : Prop) :=
-| stroke : ~P -> ~Q -> nand P Q.
+| stroke : ~P -> ~Q -> nand P Q.    (* ??? *)
 
 (** Classically, [nand P Q] would be equivalent to [~(P /\ Q)].  But
     constructively, only one direction of that is provable. *)
