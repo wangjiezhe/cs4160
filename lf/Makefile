@@ -13,10 +13,11 @@ ALLVFILES := \
 	Maps.v MapsTest.v \
 	Imp.v ImpTest.v \
 	Auto.v AutoTest.v \
-	AltAuto.v  AltAutoTest.v
+	AltAuto.v  AltAutoTest.v \
+	IndPrinciples.v IndPrinciplesTest.v
 
-# IndPrinciples.v ImpParser.v ImpCEvalFun.v Extraction.v
-# IndPrinciplesTest.v ImpParserTest.v ImpCEvalFunTest.v ExtractionTest.v
+# ImpParser.v ImpCEvalFun.v Extraction.v
+# ImpParserTest.v ImpCEvalFunTest.v ExtractionTest.v
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
