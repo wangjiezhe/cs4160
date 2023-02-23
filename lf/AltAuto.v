@@ -1946,7 +1946,17 @@ Qed.
     to expand it to handle conjunctions, negations, bi-implications,
     and [nand]. *)
 
-(* Ltac nand_intuition := ... *)
+Ltac nand_intuition :=
+  repeat match goal with
+         | [ H : ?P |- ?P ] => apply H
+         | [ |- forall _, _ ] => intro
+         | [ |- _ <-> _ ] => split
+         | [ |- nand _ _ ] => apply stroke
+         | [ H : nand _ _ |- _ ] => destruct H
+         | [ |- ~ _ ] => intro
+         | [ H : _ /\ _ |- _ ] => destruct H
+         | [ H : ?P, Hn : ~ ?P |- _ ] => destruct (Hn H)
+         end.
 
 (** Each of the three theorems below, and many others involving these
     logical connectives, should be provable with just
@@ -1954,15 +1964,15 @@ Qed.
 
 Theorem nand_comm' : forall (P Q : Prop),
     nand P Q <-> nand Q P.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. nand_intuition. Qed.
 
 Theorem nand_not' : forall (P : Prop),
     nand P P <-> ~P.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. nand_intuition. Qed.
 
 Theorem nand_not_and' : forall (P Q : Prop),
     nand P Q -> ~ (P /\ Q).
-Proof. (* FILL IN HERE *) Admitted.
+Proof. nand_intuition. Qed.
 (* Do not modify the following line: *)
 Definition manual_grade_for_nand_intuition : option (nat*string) := None.
 (** [] *)
