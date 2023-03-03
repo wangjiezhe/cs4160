@@ -175,7 +175,13 @@ Theorem skip_right : forall c,
     <{ c ; skip }>
     c.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros c st st'. split; intros H.
+  - inversion H. subst.
+    inversion H5. subst.
+    assumption.
+  - eapply E_Seq.
+    apply H. apply E_Skip.
+Qed.
 (** [] *)
 
 (** Similarly, here is a simple equivalence that optimizes [if]
@@ -263,7 +269,15 @@ Theorem if_false : forall b c1 c2,
     <{ if b then c1 else c2 end }>
     c2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros b c1 c2 Hb.
+  split; intros H.
+  - inversion H; subst; try assumption.
+    unfold bequiv in Hb. simpl in Hb.
+    rewrite Hb in H5. discriminate.
+  - apply E_IfFalse; try assumption.
+    unfold bequiv in Hb. simpl in Hb.
+    apply Hb.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (swap_if_branches)
@@ -276,7 +290,20 @@ Theorem swap_if_branches : forall b c1 c2,
     <{ if b then c1 else c2 end }>
     <{ if ~ b then c2 else c1 end }>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. split; intros.
+  - inversion H; subst.
+    + apply E_IfFalse; try assumption.
+      simpl. rewrite H5. reflexivity.
+    + apply E_IfTrue; try assumption.
+      simpl. rewrite H5. reflexivity.
+  - inversion H; subst.
+    + apply E_IfFalse; try assumption.
+      inversion H5.
+      (* Search (negb _ = true). *)
+      apply negb_true_iff. assumption.
+    + apply E_IfTrue; try assumption.
+      inversion H5. apply negb_false_iff. assumption.
+Qed.
 (** [] *)
 
 (** For [while] loops, we can give a similar pair of theorems.  A loop
@@ -294,13 +321,13 @@ Theorem while_false : forall b c,
 Proof.
   intros b c Hb. split; intros H.
   - (* -> *)
-    inversion H. subst.
+    inversion H; subst.
     + (* E_WhileFalse *)
       apply E_Skip.
     + (* E_WhileTrue *)
       rewrite Hb in H2. discriminate.
   - (* <- *)
-    inversion H. subst.
+    inversion H; subst.
     apply E_WhileFalse.
     apply Hb.  Qed.
 
@@ -379,7 +406,11 @@ Theorem while_true : forall b c,
     <{ while b do c end }>
     <{ while true do skip end }>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros b c Hb st st'.
+  split; intros.
+  - apply while_true_nonterm in H. contradiction. assumption.
+  - apply while_true_nonterm in H. contradiction. unfold bequiv. reflexivity.
+Qed.
 (** [] *)
 
 (** A more interesting fact about [while] commands is that any number
@@ -416,7 +447,15 @@ Proof.
 Theorem seq_assoc : forall c1 c2 c3,
   cequiv <{(c1;c2);c3}> <{c1;(c2;c3)}>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros c1 c2 c3 st st'.
+  split; intros.
+  - inversion H; subst. inversion H2; subst.
+    apply E_Seq with st'1; try assumption.
+    apply E_Seq with st'0; try assumption.
+  - inversion H; subst. inversion H5; subst.
+    apply E_Seq with st'1; try assumption.
+    apply E_Seq with st'0; try assumption.
+Qed.
 (** [] *)
 
 (** Proving program properties involving assignments is one place
@@ -445,7 +484,13 @@ Theorem assign_aequiv : forall (X : string) (a : aexp),
   aequiv <{ X }> a ->
   cequiv <{ skip }> <{ X := a }>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros X a Ha. unfold aequiv in Ha. simpl in Ha.
+  split; intro H; inversion H; subst; clear H.
+  - assert (st' =[ X:=a ]=> (X !-> st' X; st')) as Hx.
+    { apply E_Asgn. symmetry. apply Ha. }
+    rewrite t_update_same in Hx. apply Hx.
+  - rewrite <- Ha. rewrite t_update_same. apply E_Skip.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard (equiv_classes) *)
@@ -462,11 +507,13 @@ Proof.
     Write down your answer below in the definition of
     [equiv_classes]. *)
 
+(* X = 0 -> skip; X > 0 -> not terminate *)
 Definition prog_a : com :=
   <{ while ~(X <= 0) do
        X := X + 1
      end }>.
 
+(* Y = 0 *)
 Definition prog_b : com :=
   <{ if (X = 0) then
        X := X + 1;
@@ -480,6 +527,7 @@ Definition prog_b : com :=
 Definition prog_c : com :=
   <{ skip }> .
 
+(* X = 0 -> skip; X > 0 -> not terminate *)
 Definition prog_d : com :=
   <{ while X <> 0 do
        X := (X * Y) + 1
@@ -488,29 +536,39 @@ Definition prog_d : com :=
 Definition prog_e : com :=
   <{ Y := 0 }>.
 
+(* not terminate *)
 Definition prog_f : com :=
   <{ Y := X + 1;
      while X <> Y do
        Y := X + 1
      end }>.
 
+(* not terminate *)
 Definition prog_g : com :=
   <{ while true do
        skip
      end }>.
 
+(* skip *)
 Definition prog_h : com :=
   <{ while X <> X do
        X := X + 1
      end }>.
 
+(* X = Y -> skip; else -> not terminate *)
 Definition prog_i : com :=
   <{ while X <> Y do
        X := Y + 1
      end }>.
 
-Definition equiv_classes : list (list com)
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition equiv_classes : list (list com) :=
+  [
+    [prog_a; prog_d];
+    [prog_b; prog_e];
+    [prog_c; prog_h];
+    [prog_f; prog_g];
+    [prog_i]
+  ].
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_equiv_classes : option (nat*string) := None.
@@ -703,7 +761,22 @@ Theorem CSeq_congruence : forall c1 c1' c2 c2',
   cequiv c1 c1' -> cequiv c2 c2' ->
   cequiv <{ c1;c2 }> <{ c1';c2' }>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  assert (forall c1 c1' c2 c2' st st',
+          cequiv c1 c1' ->
+          cequiv c2 c2' ->
+          st =[ c1; c2 ]=> st' ->
+          st =[ c1'; c2' ]=> st') as A.
+  {
+    intros c1 c1' c2 c2' st st' Hc1 Hc2 H.
+    inversion H; subst.
+    apply E_Seq with st'0.
+    - apply Hc1. assumption.
+    - apply Hc2. assumption.
+  }
+  split.
+  - apply A; assumption.
+  - apply A; apply sym_cequiv; assumption.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (CIf_congruence) *)
@@ -712,7 +785,22 @@ Theorem CIf_congruence : forall b b' c1 c1' c2 c2',
   cequiv <{ if b then c1 else c2 end }>
          <{ if b' then c1' else c2' end }>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  assert (forall b b' c1 c1' c2 c2' st st',
+          bequiv b b' -> cequiv c1 c1' -> cequiv c2 c2' ->
+          st =[ if b then c1 else c2 end ]=> st' ->
+          st =[ if b' then c1' else c2' end ]=> st') as A.
+  {
+    intros b b' c1 c1' c2 c2' st st' Hb Hc1 Hc2 H.
+    inversion H; subst.
+    - apply E_IfTrue.
+      + rewrite <- Hb. assumption.
+      + apply Hc1. assumption.
+    - apply E_IfFalse; try rewrite <- Hb; try apply Hc2; auto.
+  }
+  split.
+  - apply A; auto.
+  - apply A; try apply sym_bequiv; try apply sym_cequiv; auto.
+Qed.
 (** [] *)
 
 (** For example, here are two equivalent programs and a proof of their
@@ -734,7 +822,7 @@ Proof.
   - apply CIf_congruence.
     + apply refl_bequiv.
     + apply CAsgn_congruence. unfold aequiv. simpl.
-      symmetry. apply minus_diag.
+      symmetry. apply sub_diag.
     + apply refl_cequiv.
 Qed.
 
@@ -746,7 +834,101 @@ Qed.
     relation (formally), together with an informal sketch of a proof
     that it is an equivalence but not a congruence. *)
 
-(* FILL IN HERE *)
+Definition not_congr (c1 c2 : com) : Prop :=
+  forall (st st' : state),
+    (st =[ c1; c1 ]=> st') <-> (st =[ c2; c2 ]=> st').
+
+Lemma refl_not_congr : forall (c : com),
+  not_congr c c.
+Proof.
+  unfold not_congr. intros c st st'. reflexivity.  Qed.
+
+Lemma sym_not_congr : forall (c1 c2 : com),
+  not_congr c1 c2 -> not_congr c2 c1.
+Proof.
+  unfold not_congr. intros c1 c2 H st st'.
+  rewrite H. reflexivity.
+Qed.
+
+Lemma trans_not_congr : forall (c1 c2 c3 : com),
+  not_congr c1 c2 -> not_congr c2 c3 -> not_congr c1 c3.
+Proof.
+  unfold not_congr. intros c1 c2 c3 H12 H23 st st'.
+  rewrite H12. apply H23.
+Qed.
+
+(* So [not_congr] is an equivalence. *)
+
+Ltac imp_intuition :=
+  repeat match goal with
+    | [ |- forall _, _ ] => intro
+    | [ H : ?P |- ?P ] => apply H
+    | [ |- ?P = ?P ] => reflexivity
+    | [ H : ?P <> ?P |- _ ] => contradiction
+    | [ H : ?P = ?Q, Hn : ?P <> ?Q |- _ ] => contradiction
+    | [ |- (_ =? _) = true ] => apply eqb_eq
+    | [ |- (_ =? _) = false ] => apply eqb_neq
+    | [ H : (_ =? _) = true |- _ ] => apply eqb_eq in H
+    | [ H : (_ =? _) = false |- _ ] => apply eqb_neq in H
+    (* state *)
+    (* ... (X |-> n; st) X ... *)
+    | [ H : context [(t_update _ ?X _ ) ?X] |- _ ]
+      => rewrite t_update_eq in H; try discriminate
+    (* ... (X !-> m; X !-> n; st) ... *)
+    | [ |- context [t_update (t_update _ ?X _) ?X _] ]
+      => rewrite t_update_shadow
+    (* st X = n -> ... (X !-> n; st) ... *)
+    | [ H : ?st ?X = ?n |- context [t_update ?st ?X ?n] ]
+      => rewrite <- H; rewrite t_update_same
+    (* aeval *)
+    (* aeval st n = n *)
+    | [ |- aeval ?st (ANum ?n) = ?n ] => reflexivity
+    (* ceval *)
+    (* st =[ ... ]=> st' -> ... *)
+    | [ H : ceval _ _ _ |- _ ] => inversion H; subst; clear H; simpl in *
+    (* st =[ skip ]=> st *)
+    | [ |- ceval (CSkip) ?st ?st ] => apply E_Skip
+    (* st =[ skip; skip ]=> st *)
+    | [ |- ceval (CSeq CSkip CSkip) ?st ?st ] => eapply E_Seq; apply E_Skip
+    (* st X = n -> st =[ if X = n then ... else ... end ]=> ... *)
+    | [ H : ?st ?X = ?n |- ceval (CIf (BEq (AId ?X) (ANum ?n)) _ _) ?st _ ]
+      => apply E_IfTrue; simpl
+    (* st X <> n -> st =[ if X = n then ... else ... end ]=> ... *)
+    | [ H : ?st ?X <> ?n |- ceval (CIf (BEq (AId ?X) (ANum ?n)) _ _) ?st _ ]
+      => apply E_IfFalse; simpl
+    (* (X !-> n; st) =[ if X = n then ... else ... end ]=> ... *)
+    | [ |- ceval (CIf (BEq (AId ?X) (ANum ?n)) _ _) (t_update _ ?X ?n) _ ]
+      => apply E_IfTrue; simpl
+    (* (X !-> m; st) =[ if X = n then ... else ... end ]=> ... *)
+    | [ H : ?st ?X = ?n |-
+        ceval (CIf (BEq (AId ?X) (ANum ?n)) _ _) (t_update ?st ?X ?m) _ ]
+      => apply E_IfFalse; simpl
+    (* st =[ X := n ]=> (X !-> n; st) *)
+    | [ |- ceval (CAsgn ?X (ANum ?n)) ?st (t_update ?st ?X ?n) ]
+      => apply E_Asgn
+  end.
+
+Example not_congr_example :
+  not_congr
+  <{ if X = 0 then X := 1 else if X = 1 then X := 0 else skip end end }>
+  <{ skip }>.
+Proof.
+  split; imp_intuition.
+  - destruct (eqb_spec (st' X) 0); destruct (eqb_spec (st' X) 1).
+    + rewrite e in e0. discriminate.
+    + apply E_Seq with (X !-> 1; st'); imp_intuition.
+      assert ((X !-> 1; st') =[ X := 0 ]=> (X !-> st' X; X !-> 1; st')) as A.
+        { apply E_Asgn. simpl. symmetry. apply e. }
+      rewrite t_update_shadow in A. rewrite t_update_same in A. apply A.
+    + apply E_Seq with (X !-> 0; st'); imp_intuition.
+      assert ((X !-> 0; st') =[ X := 1 ]=> (X !-> st' X; X !-> 0; st')) as A.
+        { apply E_Asgn. simpl. symmetry. apply e. }
+      rewrite t_update_shadow in A. rewrite t_update_same in A. apply A.
+    + apply E_Seq with st'; imp_intuition.
+Qed.
+
+(* It is obvious that the above two commands are _not congruent_. *)
+
 (* Do not modify the following line: *)
 Definition manual_grade_for_not_congr : option (nat*string) := None.
 (** [] *)
