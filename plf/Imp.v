@@ -463,13 +463,25 @@ Admitted.
     it is sound.  Use the tacticals we've just seen to make the proof
     as short and elegant as possible. *)
 
-Fixpoint optimize_0plus_b (b : bexp) : bexp
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint optimize_0plus_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_0plus a1) (optimize_0plus a2)
+  | BNeq a1 a2 => BNeq (optimize_0plus a1) (optimize_0plus a2)
+  | BLe a1 a2 => BLe (optimize_0plus a1) (optimize_0plus a2)
+  | BGt a1 a2 => BGt (optimize_0plus a1) (optimize_0plus a2)
+  | BNot b => BNot (optimize_0plus_b b)
+  | BAnd b1 b2 => BAnd (optimize_0plus_b b1) (optimize_0plus_b b2)
+  end.
 
 Theorem optimize_0plus_b_sound : forall b,
   beval (optimize_0plus_b b) = beval b.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_0plus_sound; reflexivity).
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, standard, optional (optimize)
@@ -482,9 +494,211 @@ Proof.
     optimization and its correctness proof -- and build up
     incrementally to something more interesting.)  *)
 
-(* FILL IN HERE
+Fixpoint optimize_plus0 (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus e1 (ANum 0) => optimize_plus0 e1
+  | APlus  e1 e2 => APlus  (optimize_plus0 e1) (optimize_plus0 e2)
+  | AMinus e1 e2 => AMinus (optimize_plus0 e1) (optimize_plus0 e2)
+  | AMult  e1 e2 => AMult  (optimize_plus0 e1) (optimize_plus0 e2)
+  end.
 
-    [] *)
+Theorem optimize_plus0_a_sound : forall a,
+  aeval (optimize_plus0 a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a2;
+    try (simpl; simpl in IHa2; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; rewrite IHa1; try (symmetry; apply add_0_r); reflexivity).
+Qed.
+
+Fixpoint optimize_minus0 (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus  e1 e2 => APlus  (optimize_minus0 e1) (optimize_minus0 e2)
+  | AMinus e1 (ANum 0) => optimize_minus0 e1
+  | AMinus e1 e2 => AMinus (optimize_minus0 e1) (optimize_minus0 e2)
+  | AMult  e1 e2 => AMult  (optimize_minus0 e1) (optimize_minus0 e2)
+  end.
+
+Theorem optimize_minus0_a_sound : forall a,
+  aeval (optimize_minus0 a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a2;
+    try (simpl; simpl in IHa2; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; rewrite IHa1; try (symmetry; apply sub_0_r); reflexivity).
+Qed.
+
+Fixpoint optimize_0mult (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus  e1 e2 => APlus  (optimize_0mult e1) (optimize_0mult e2)
+  | AMinus e1 e2 => AMinus (optimize_0mult e1) (optimize_0mult e2)
+  | AMult (ANum 0) _ => ANum 0
+  | AMult  e1 e2 => AMult  (optimize_0mult e1) (optimize_0mult e2)
+  end.
+
+Theorem optimize_0mult_a_sound : forall a,
+  aeval (optimize_0mult a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a1;
+    try (simpl; simpl in IHa1; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; try rewrite IHa2; reflexivity).
+Qed.
+
+Fixpoint optimize_mult0 (a:aexp) : aexp :=
+  match a with
+  | ANum n => ANum n
+  | APlus  e1 e2 => APlus  (optimize_mult0 e1) (optimize_mult0 e2)
+  | AMinus e1 e2 => AMinus (optimize_mult0 e1) (optimize_mult0 e2)
+  | AMult _ (ANum 0) => ANum 0
+  | AMult  e1 e2 => AMult  (optimize_mult0 e1) (optimize_mult0 e2)
+  end.
+
+Theorem optimize_mult0_a_sound : forall a,
+  aeval (optimize_mult0 a) = aeval a.
+Proof.
+  induction a;
+    try reflexivity;
+    try (simpl; rewrite IHa1; rewrite IHa2; reflexivity).
+  simpl.
+  destruct a2;
+    try (simpl; simpl in IHa2; rewrite IHa1; rewrite IHa2; reflexivity).
+  destruct n;
+    try (simpl; try rewrite IHa1; try (symmetry; rewrite mul_0_r); reflexivity).
+Qed.
+
+Definition optimize_a (a:aexp) : aexp :=
+  optimize_mult0
+   (optimize_0mult
+    (optimize_minus0
+      (optimize_plus0
+        (optimize_0plus a)))).
+
+Theorem optimize_a_sound : forall a,
+  aeval (optimize_a a) = aeval a.
+Proof.
+  intros. unfold optimize_a.
+  rewrite optimize_mult0_a_sound.
+  rewrite optimize_0mult_a_sound.
+  rewrite optimize_minus0_a_sound.
+  rewrite optimize_plus0_a_sound.
+  apply optimize_0plus_sound.
+Qed.
+
+Fixpoint optimize_plus0_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_0plus a1) (optimize_0plus a2)
+  | BNeq a1 a2 => BNeq (optimize_0plus a1) (optimize_0plus a2)
+  | BLe a1 a2 => BLe (optimize_0plus a1) (optimize_0plus a2)
+  | BGt a1 a2 => BGt (optimize_0plus a1) (optimize_0plus a2)
+  | BNot b => BNot (optimize_plus0_b b)
+  | BAnd b1 b2 => BAnd (optimize_plus0_b b1) (optimize_plus0_b b2)
+  end.
+
+Theorem optimize_plus0_b_sound : forall b,
+  beval (optimize_plus0_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_0plus_sound; reflexivity).
+Qed.
+
+Fixpoint optimize_minus0_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_minus0 a1) (optimize_minus0 a2)
+  | BNeq a1 a2 => BNeq (optimize_minus0 a1) (optimize_minus0 a2)
+  | BLe a1 a2 => BLe (optimize_minus0 a1) (optimize_minus0 a2)
+  | BGt a1 a2 => BGt (optimize_minus0 a1) (optimize_minus0 a2)
+  | BNot b => BNot (optimize_minus0_b b)
+  | BAnd b1 b2 => BAnd (optimize_minus0_b b1) (optimize_minus0_b b2)
+  end.
+
+Theorem optimize_minus0_b_sound : forall b,
+  beval (optimize_minus0_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_minus0_a_sound; reflexivity).
+Qed.
+
+Fixpoint optimize_0mult_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_0mult a1) (optimize_0mult a2)
+  | BNeq a1 a2 => BNeq (optimize_0mult a1) (optimize_0mult a2)
+  | BLe a1 a2 => BLe (optimize_0mult a1) (optimize_0mult a2)
+  | BGt a1 a2 => BGt (optimize_0mult a1) (optimize_0mult a2)
+  | BNot b => BNot (optimize_0mult_b b)
+  | BAnd b1 b2 => BAnd (optimize_0mult_b b1) (optimize_0mult_b b2)
+  end.
+
+Theorem optimize_0mult_b_sound : forall b,
+  beval (optimize_0mult_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_0mult_a_sound; reflexivity).
+Qed.
+
+Fixpoint optimize_mult0_b (b : bexp) : bexp :=
+  match b with
+  | BTrue | BFalse => b
+  | BEq a1 a2 => BEq (optimize_mult0 a1) (optimize_mult0 a2)
+  | BNeq a1 a2 => BNeq (optimize_mult0 a1) (optimize_mult0 a2)
+  | BLe a1 a2 => BLe (optimize_mult0 a1) (optimize_mult0 a2)
+  | BGt a1 a2 => BGt (optimize_mult0 a1) (optimize_mult0 a2)
+  | BNot b => BNot (optimize_mult0_b b)
+  | BAnd b1 b2 => BAnd (optimize_mult0_b b1) (optimize_mult0_b b2)
+  end.
+
+Theorem optimize_mult0_b_sound : forall b,
+  beval (optimize_mult0_b b) = beval b.
+Proof.
+  induction b;
+    try (simpl; rewrite IHb; reflexivity);
+    try (simpl; rewrite IHb1; rewrite IHb2; reflexivity);
+    try (simpl; repeat rewrite optimize_mult0_a_sound; reflexivity).
+Qed.
+
+Definition optimize_b (b:bexp) : bexp :=
+  optimize_mult0_b
+   (optimize_0mult_b
+    (optimize_minus0_b
+      (optimize_plus0_b
+        (optimize_0plus_b b)))).
+
+Theorem optimize_b_sound : forall b,
+  beval (optimize_b b) = beval b.
+Proof.
+  intros. unfold optimize_b.
+  rewrite optimize_mult0_b_sound.
+  rewrite optimize_0mult_b_sound.
+  rewrite optimize_minus0_b_sound.
+  rewrite optimize_plus0_b_sound.
+  apply optimize_0plus_b_sound.
+Qed.
+
+(* [] *)
 
 (* ================================================================= *)
 (** ** Defining New Tactics *)
@@ -548,6 +762,8 @@ Qed.
     then invoking [lia] will either solve the goal or fail, meaning
     that the goal is actually false.  (If the goal is _not_ of this
     form, [lia] will fail.) *)
+
+(* lia: linear integer arithmetic *)
 
 Example silly_presburger_example : forall m n o p,
   m + n <= n + o /\ o + 3 = p + 3 ->
@@ -777,7 +993,42 @@ Inductive aevalR : aexp -> nat -> Prop :=
 
     Write out a corresponding definition of boolean evaluation as a
     relation (in inference rule notation). *)
-(* FILL IN HERE *)
+(*
+    --------------    (E_BTrue)
+    BTrue ==> true
+
+    ----------------    (E_BFalse)
+    BFalse ==> false
+
+           a1 ==> n1
+           a2 ==> n2
+    ----------------------    (E_BEq)
+    BEq a1 a2 ==> n1 =? n2
+
+            a1 ==> n1
+            a2 ==> n2
+    ------------------------------    (E_BNeq)
+    BNeq a1 a2 ==> negb (n1 =? n2)
+
+           a1 ==> n1
+           a2 ==> n2
+    ----------------------    (E_BLe)
+    BLe a1 a2 ==> n1 <=? n2
+
+           a1 ==> n1
+           a2 ==> n2
+    --------------------------    (E_BGt)
+    BGt a1 a2 ==> negb (n1 <=? n2)
+
+        b  ==> v
+    -----------------   (E_BNot)
+    BNot b ==> negb v
+
+            b1 ==> v1
+            b2 ==> v2
+    -------------------------   (E_BAnd)
+    BAnd b1 b2 ==> andb v1 v2
+*)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_beval_rules : option (nat*string) := None.
@@ -847,14 +1098,51 @@ Qed.
 
 Reserved Notation "e '==>b' b" (at level 90, left associativity).
 Inductive bevalR: bexp -> bool -> Prop :=
-(* FILL IN HERE *)
-where "e '==>b' b" := (bevalR e b) : type_scope
+  | E_BTrue : BTrue ==>b true
+  | E_BFalse : BFalse ==>b false
+  | E_BEq a1 a2 n1 n2 :
+      a1 ==> n1 ->
+      a2 ==> n2 ->
+      BEq a1 a2 ==>b n1 =? n2
+  | E_BNeq a1 a2 n1 n2 :
+      a1 ==> n1 ->
+      a2 ==> n2 ->
+      BNeq a1 a2 ==>b negb (n1 =? n2)
+  | E_BLe a1 a2 n1 n2 :
+      a1 ==> n1 ->
+      a2 ==> n2 ->
+      BLe a1 a2 ==>b n1 <=? n2
+  | E_BGt a1 a2 n1 n2 :
+      a1 ==> n1 ->
+      a2 ==> n2 ->
+      BGt a1 a2 ==>b negb (n1 <=? n2)
+  | E_BNot b v :
+      b ==>b v ->
+      BNot b ==>b negb v
+  | E_BAnd b1 b2 v1 v2 :
+      b1 ==>b v1 ->
+      b2 ==>b v2 ->
+      BAnd b1 b2 ==>b andb v1 v2
+
+  where "e '==>b' b" := (bevalR e b) : type_scope
 .
 
 Lemma beval_iff_bevalR : forall b bv,
   b ==>b bv <-> beval b = bv.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. split.
+  - intros H.
+    induction H; simpl;
+      try apply aeval_iff_aevalR in H;
+      try apply aeval_iff_aevalR in H0;
+      subst; try reflexivity.
+  - generalize dependent bv.
+    induction b; simpl; intros; subst; constructor;
+      try apply IHb1; try apply IHb2; try apply IHb;
+      try reflexivity;
+      try apply aeval_iff_aevalR; try reflexivity;
+      try apply aeval_iff_aevalR; try reflexivity.
+Qed.
 (** [] *)
 
 End AExp.
@@ -1311,7 +1599,6 @@ Locate "while".
 (* ===>
     Notation
       "'while' x 'do' y 'end'" := CWhile x y : com_scope (default interpretation)
-      "'_' '!->' v" := t_empty v (default interpretation)
 *)
 
 (* ================================================================= *)
@@ -1542,7 +1829,10 @@ Example ceval_example2:
     Z := 2
   ]=> (Z !-> 2 ; Y !-> 1 ; X !-> 0).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply E_Seq with (X !-> 0).
+  - constructor. reflexivity.
+  - apply E_Seq with (Y !-> 1; X !-> 0); constructor; reflexivity.
+Qed.
 (** [] *)
 
 Set Printing Implicit.
@@ -1556,15 +1846,32 @@ Check @ceval_example2.
     which you can reverse-engineer to discover the program you should
     write.  The proof of that theorem will be somewhat lengthy. *)
 
-Definition pup_to_n : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition pup_to_n : com :=
+  <{
+    Y := 0;
+    while X > 0 do
+      Y := Y + X;
+      X := X - 1
+    end
+  }>.
 
 Theorem pup_to_2_ceval :
   (X !-> 2) =[
     pup_to_n
   ]=> (X !-> 0 ; Y !-> 3 ; X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply E_Seq with (Y !-> 0; X !-> 2).
+  - apply E_Asgn. reflexivity.
+  - apply E_WhileTrue with (X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2).
+    + reflexivity.
+    + apply E_Seq with (Y !-> 2 ; Y !-> 0 ; X !-> 2);
+          constructor; reflexivity.
+    + apply E_WhileTrue with (X !-> 0 ; Y !-> 3 ; X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2).
+      * reflexivity.
+      * apply E_Seq with (Y !-> 3 ; X !-> 1 ; Y !-> 2 ; Y !-> 0 ; X !-> 2);
+        constructor; reflexivity.
+      * apply E_WhileFalse. reflexivity.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -1640,7 +1947,16 @@ Proof.
 
     State and prove a specification of [XtimesYinZ]. *)
 
-(* FILL IN HERE *)
+Theorem XtimesYinZ_spec : forall st n m st',
+  st X = n ->
+  st Y = m ->
+  st =[ XtimesYinZ ]=> st' ->
+  st' Z = m * n.
+Proof.
+  intros st n m st' HX HY Heval.
+  inversion Heval. subst. clear Heval. simpl.
+  rewrite mul_comm. constructor.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_XtimesYinZ_spec : option (nat*string) := None.
@@ -1658,8 +1974,13 @@ Proof.
       [loopdef] terminates.  Most of the cases are immediately
       contradictory and so can be solved in one step with
       [discriminate]. *)
+  induction contra; try discriminate.
+  - inversion Heqloopdef. subst. clear Heqloopdef.
+    discriminate.
+  - inversion Heqloopdef. subst. clear Heqloopdef.
+    apply IHcontra2. reflexivity.
+Qed.
 
-  (* FILL IN HERE *) Admitted.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (no_whiles_eqv)
@@ -1686,13 +2007,39 @@ Fixpoint no_whiles (c : com) : bool :=
     while loops.  Then prove its equivalence with [no_whiles]. *)
 
 Inductive no_whilesR: com -> Prop :=
- (* FILL IN HERE *)
+  | NW_Skip : no_whilesR <{ skip }>
+  | NW_Asgn x a : no_whilesR <{ x := a }>
+  | NW_Seq c1 c2 :
+      no_whilesR c1 -> no_whilesR c2 ->
+      no_whilesR <{ c1; c2 }>
+  | NW_If b c1 c2 :
+      no_whilesR c1 -> no_whilesR c2 ->
+      no_whilesR <{if b then c1 else c2 end}>
 .
 
 Theorem no_whiles_eqv:
   forall c, no_whiles c = true <-> no_whilesR c.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros c. split.
+  - induction c; intros; try constructor;
+    repeat (
+        try apply IHc1;
+        try apply IHc2;
+        simpl in H;
+        apply andb_true_iff in H;
+        destruct H as [H1 H2];
+        try apply H1; try apply H2
+      ).
+    inversion H.
+  - intros H.
+    induction H; simpl; try reflexivity;
+    try (
+      apply andb_true_iff;
+      split;
+      try apply IHno_whilesR1;
+      try apply IHno_whilesR2
+    ).
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, standard (no_whiles_terminating)
@@ -1703,6 +2050,60 @@ Proof.
     Use either [no_whiles] or [no_whilesR], as you prefer. *)
 
 (* FILL IN HERE *)
+Theorem no_whiles_terminating : forall st c,
+  no_whiles c = true ->
+  exists st', st =[ c ]=> st'.
+Proof.
+  intros st c H.
+  generalize dependent st.
+  induction c.
+  - intros. exists st. constructor.
+  - intros. exists (x !-> (aeval st a); st).
+    constructor. reflexivity.
+  - intros.
+    simpl in H. apply andb_true_iff in H.
+    destruct H as [H1 H2].
+    destruct (IHc1 H1 st) as [st1 H1'].
+    destruct (IHc2 H2 st1) as [st2 H2'].
+    exists st2.
+    apply E_Seq with st1. apply H1'. apply H2'.
+  - intros.
+    simpl in H. apply andb_true_iff in H.
+    destruct H as [H1 H2].
+    destruct (IHc1 H1 st) as [st1 H1'].
+    destruct (IHc2 H2 st) as [st2 H2'].
+    destruct (beval st b) eqn:Hb.
+    + exists st1.
+      apply E_IfTrue. apply Hb. apply H1'.
+    + exists st2.
+      apply E_IfFalse. apply Hb. apply H2'.
+  - inversion H.
+Qed.
+
+Theorem no_whilesR_terminating : forall st c,
+  no_whilesR c ->
+  exists st', st =[ c ]=> st'.
+Proof.
+  intros st c H.
+  generalize dependent st.
+  induction H.
+  - intros. exists st. constructor.
+  - intros. exists (x !-> (aeval st a); st).
+    constructor. reflexivity.
+  - intros.
+    destruct (IHno_whilesR1 st) as [st1 H1].
+    destruct (IHno_whilesR2 st1) as [st2 H2].
+    exists st2.
+    apply E_Seq with st1. apply H1. apply H2.
+  - intros.
+    destruct (IHno_whilesR1 st) as [st1 H1].
+    destruct (IHno_whilesR2 st) as [st2 H2].
+    destruct (beval st b) eqn:Hb.
+    + exists st1.
+      apply E_IfTrue. apply Hb. apply H1.
+    + exists st2.
+      apply E_IfFalse. apply Hb. apply H2.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_no_whiles_terminating : option (nat*string) := None.
@@ -1773,8 +2174,19 @@ Inductive sinstr : Type :=
 
 Fixpoint s_execute (st : state) (stack : list nat)
                    (prog : list sinstr)
-                 : list nat
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+                 : list nat :=
+  match prog with
+  | [] => stack
+  | h :: t =>
+      match h, stack with
+      | SPush n, s => s_execute st (n :: s) t
+      | SLoad x, s => s_execute st ((st x) :: s) t
+      | SPlus, n1 :: n2 :: s => s_execute st ((n2 + n1) :: s) t
+      | SMinus, n1 :: n2 :: s => s_execute st ((n2 - n1) :: s) t
+      | SMult, n1 :: n2 :: s => s_execute st ((n2 * n1) :: s) t
+      | _, s => s_execute st s t
+      end
+  end.
 
 Check s_execute.
 
@@ -1782,20 +2194,26 @@ Example s_execute1 :
      s_execute empty_st []
        [SPush 5; SPush 3; SPush 1; SMinus]
    = [2; 5].
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example s_execute2 :
      s_execute (X !-> 3) [3;4]
        [SPush 4; SLoad X; SMult; SPlus]
    = [15; 4].
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (** Next, write a function that compiles an [aexp] into a stack
     machine program. The effect of running the program should be the
     same as pushing the value of the expression on the stack. *)
 
-Fixpoint s_compile (e : aexp) : list sinstr
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint s_compile (e : aexp) : list sinstr :=
+  match e with
+  | ANum n => [SPush n]
+  | AId x => [SLoad x]
+  | APlus a1 a2 => (s_compile a1) ++ (s_compile a2) ++ [SPlus]
+  | AMinus a1 a2 => (s_compile a1) ++ (s_compile a2) ++ [SMinus]
+  | AMult a1 a2 => (s_compile a1) ++ (s_compile a2) ++ [SMult]
+  end.
 
 (** After you've defined [s_compile], prove the following to test
     that it works. *)
@@ -1803,7 +2221,7 @@ Fixpoint s_compile (e : aexp) : list sinstr
 Example s_compile1 :
   s_compile <{ X - (2 * Y) }>
   = [SLoad X; SPush 2; SLoad Y; SMult; SMinus].
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard (execute_app) *)
@@ -1816,7 +2234,17 @@ Example s_compile1 :
 Theorem execute_app : forall st p1 p2 stack,
   s_execute st stack (p1 ++ p2) = s_execute st (s_execute st stack p1) p2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros st p1 p2.
+  induction p1.
+  - intros. reflexivity.
+  - intros.
+    destruct a;
+    try apply IHp1;
+    destruct stack;
+    try apply IHp1;
+    destruct stack;
+    try apply IHp1.
+Qed.
 
 (** [] *)
 
@@ -1830,14 +2258,19 @@ Proof.
 Lemma s_compile_correct_aux : forall st e stack,
   s_execute st stack (s_compile e) = aeval st e :: stack.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros st e.
+  induction e; simpl; try reflexivity; intros;
+    repeat rewrite execute_app;
+    try rewrite IHe1; try rewrite IHe2; try reflexivity.
+Qed.
 
 (** The main theorem should be a very easy corollary of that lemma. *)
 
 Theorem s_compile_correct : forall (st : state) (e : aexp),
   s_execute st [] (s_compile e) = [ aeval st e ].
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. apply s_compile_correct_aux.
+Qed.
 
 (** [] *)
 
@@ -1858,9 +2291,25 @@ Proof.
     would _not_ be equivalent to the original, since it would make more
     programs terminate.) *)
 
-(* FILL IN HERE
+Fixpoint beval_sc (st : state) (b : bexp) : bool :=
+  match b with
+  | <{true}>      => true
+  | <{false}>     => false
+  | <{a1 = a2}>   => (aeval st a1) =? (aeval st a2)
+  | <{a1 <> a2}>  => negb ((aeval st a1) =? (aeval st a2))
+  | <{a1 <= a2}>  => (aeval st a1) <=? (aeval st a2)
+  | <{a1 > a2}>   => negb ((aeval st a1) <=? (aeval st a2))
+  | <{~ b1}>      => negb (beval_sc st b1)
+  | <{b1 && b2}>  => if beval_sc st b1 then beval_sc st b2 else false
+  end.
 
-    [] *)
+Theorem beval_eq_beval_sc : forall st b,
+  beval st b = beval_sc st b.
+Proof.
+  intros. reflexivity.
+Qed.
+
+(* [] *)
 
 Module BreakImp.
 (** **** Exercise: 4 stars, advanced (break_imp)
@@ -1981,8 +2430,39 @@ Reserved Notation "st '=[' c ']=>' st' '/' s"
 
 Inductive ceval : com -> state -> result -> state -> Prop :=
   | E_Skip : forall st,
-      st =[ CSkip ]=> st / SContinue
-  (* FILL IN HERE *)
+      st =[ skip ]=> st / SContinue
+  | E_Break : forall st,
+      st =[ break ]=> st / SBreak
+  | E_Asgn : forall st a n x,
+      aeval st a = n ->
+      st =[ x := a ]=> (x !-> n; st) / SContinue
+  | E_SeqContinue : forall c1 c2 st st' st'' s,
+      st  =[ c1 ]=> st' / SContinue  ->
+      st' =[ c2 ]=> st'' / s ->
+      st  =[ c1 ; c2 ]=> st'' / s
+  | E_SeqBreak : forall c1 c2 st st',
+      st  =[ c1 ]=> st' / SBreak  ->
+      st  =[ c1 ; c2 ]=> st' / SBreak
+  | E_IfTrue : forall st st' b c1 c2 s,
+      beval st b = true ->
+      st =[ c1 ]=> st' / s ->
+      st =[ if b then c1 else c2 end]=> st' / s
+  | E_IfFalse : forall st st' b c1 c2 s,
+      beval st b = false ->
+      st =[ c2 ]=> st' / s ->
+      st =[ if b then c1 else c2 end]=> st' / s
+  | E_WhileFalse : forall b st c,
+      beval st b = false ->
+      st =[ while b do c end ]=> st / SContinue
+  | E_WhileTrueContinue : forall st st' st'' b c s,
+      beval st b = true ->
+      st  =[ c ]=> st' / SContinue ->
+      st' =[ while b do c end ]=> st'' / s ->
+      st  =[ while b do c end ]=> st'' / SContinue
+  | E_WhileTrueBreak : forall st st' b c,
+      beval st b = true ->
+      st  =[ c ]=> st' / SBreak ->
+      st  =[ while b do c end ]=> st' / SContinue
 
   where "st '=[' c ']=>' st' '/' s" := (ceval c st s st').
 
@@ -1992,33 +2472,41 @@ Theorem break_ignore : forall c st st' s,
      st =[ break; c ]=> st' / s ->
      st = st'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  inversion H. subst. clear H.
+  - inversion H2.
+  - inversion H5. reflexivity.
+Qed.
 
 Theorem while_continue : forall b c st st' s,
   st =[ while b do c end ]=> st' / s ->
   s = SContinue.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. inversion H; reflexivity.
+Qed.
 
 Theorem while_stops_on_break : forall b c st st',
   beval st b = true ->
   st =[ c ]=> st' / SBreak ->
   st =[ while b do c end ]=> st' / SContinue.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. apply E_WhileTrueBreak; assumption.
+Qed.
 
 Theorem seq_continue : forall c1 c2 st st' st'',
   st =[ c1 ]=> st' / SContinue ->
   st' =[ c2 ]=> st'' / SContinue ->
   st =[ c1 ; c2 ]=> st'' / SContinue.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. apply E_SeqContinue with st'; assumption.
+Qed.
 
 Theorem seq_stops_on_break : forall c1 c2 st st',
   st =[ c1 ]=> st' / SBreak ->
   st =[ c1 ; c2 ]=> st' / SBreak.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. apply E_SeqBreak. assumption.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced, optional (while_break_true) *)
@@ -2027,7 +2515,15 @@ Theorem while_break_true : forall b c st st',
   beval st' b = true ->
   exists st'', st'' =[ c ]=> st' / SBreak.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros.
+  remember (CWhile b c) as c_while.
+  generalize dependent c.
+  induction H; intros;
+    try (inversion Heqc_while; subst; clear Heqc_while).
+  - rewrite H in H0. discriminate.
+  - apply IHceval2. apply H0. reflexivity.
+  - exists st. apply H1.
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced, optional (ceval_deterministic) *)
@@ -2036,7 +2532,56 @@ Theorem ceval_deterministic: forall (c:com) st st1 st2 s1 s2,
      st =[ c ]=> st2 / s2 ->
      st1 = st2 /\ s1 = s2.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros c st st1 st2 s1 s2 H.
+  generalize dependent s2. generalize dependent st2.
+  induction H.
+  - (* E_Skip *)
+    intros. inversion H; subst; clear H. split; reflexivity.
+  - (* E_Break *)
+    intros. inversion H; subst; clear H. split; reflexivity.
+  - (* E_Asgn *)
+    intros. inversion H0; subst; clear H0. split; reflexivity.
+  - (* E_SeqContinue *)
+    intros. inversion H1; subst; clear H1.
+    + apply IHceval1 in H4.
+      inversion H4; subst; clear H4.
+      apply IHceval2. apply H8.
+    + apply IHceval1 in H7.
+      inversion H7. discriminate.
+  - (* E_SeqBreak *)
+    intros. inversion H0; subst; clear H0.
+    + apply IHceval in H3. inversion H3. discriminate.
+    + apply IHceval. apply H6.
+  - (* E_IfTrue *)
+    intros. inversion H1; subst; clear H1.
+    + apply IHceval. apply H9.
+    + rewrite H in H8. discriminate.
+  - (* E_IfFalse *)
+    intros. inversion H1; subst; clear H1.
+    + rewrite H in H8. discriminate.
+    + apply IHceval. apply H9.
+  - (* E_WhileFalse *)
+    intros. inversion H0; subst; clear H0.
+    + split; reflexivity.
+    + rewrite H in H3. discriminate.
+    + rewrite H in H3. discriminate.
+  - (* E_WhileTrueContinue *)
+    intros. inversion H2; subst; clear H2.
+    + rewrite H in H8. discriminate.
+    + apply IHceval1 in H6.
+      inversion H6; subst; clear H6.
+      apply IHceval2 in H10.
+      inversion H10; subst; clear H10.
+      split; reflexivity.
+    + apply IHceval1 in H9. inversion H9. discriminate.
+  - (* E_WhileTrueBreak *)
+    intros. inversion H1; subst; clear H1.
+    + rewrite H in H7. discriminate.
+    + apply IHceval in H5. inversion H5. discriminate.
+    + apply IHceval in H8.
+      inversion H8; subst; clear H8.
+      split; reflexivity.
+Qed.
 
 (** [] *)
 End BreakImp.
@@ -2056,6 +2601,92 @@ End BreakImp.
     about making up a concrete Notation for [for] loops, but feel free
     to play with this too if you like.) *)
 
+Module ForImp.
+
+Inductive com : Type :=
+  | CSkip
+  | CBreak
+  | CAsgn (x : string) (a : aexp)
+  | CSeq (c1 c2 : com)
+  | CIf (b : bexp) (c1 c2 : com)
+  | CWhile (b : bexp) (c : com)
+  | CFor (init : com) (test : bexp) (acc body : com).
+
+Notation "'break'" := CBreak (in custom com at level 0).
+Notation "'skip'"  :=
+         CSkip (in custom com at level 0) : com_scope.
+Notation "x := y"  :=
+         (CAsgn x y)
+            (in custom com at level 0, x constr at level 0,
+             y at level 85, no associativity) : com_scope.
+Notation "x ; y" :=
+         (CSeq x y)
+           (in custom com at level 90, right associativity) : com_scope.
+Notation "'if' x 'then' y 'else' z 'end'" :=
+         (CIf x y z)
+           (in custom com at level 89, x at level 99,
+            y at level 99, z at level 99) : com_scope.
+Notation "'while' x 'do' y 'end'" :=
+         (CWhile x y)
+            (in custom com at level 89, x at level 99, y at level 99) : com_scope.
+Notation "'for' x , y , z 'do' t 'end'" :=
+         (CFor x y z t)
+            (in custom com at level 89, x at level 99, y at level 99,
+             z at level 99, t at level 99) : com_scope.
+
+Inductive result : Type :=
+  | SContinue
+  | SBreak.
+
+Reserved Notation "st '=[' c ']=>' st' '/' s"
+     (at level 40, c custom com at level 99, st' constr at next level).
+
+Inductive ceval : com -> state -> result -> state -> Prop :=
+  | E_Skip : forall st,
+      st =[ skip ]=> st / SContinue
+  | E_Break : forall st,
+      st =[ break ]=> st / SBreak
+  | E_Asgn : forall st a n x,
+      aeval st a = n ->
+      st =[ x := a ]=> (x !-> n; st) / SContinue
+  | E_SeqContinue : forall c1 c2 st st' st'' s,
+      st  =[ c1 ]=> st' / SContinue  ->
+      st' =[ c2 ]=> st'' / s ->
+      st  =[ c1 ; c2 ]=> st'' / s
+  | E_SeqBreak : forall c1 c2 st st',
+      st  =[ c1 ]=> st' / SBreak  ->
+      st  =[ c1 ; c2 ]=> st' / SBreak
+  | E_IfTrue : forall st st' b c1 c2 s,
+      beval st b = true ->
+      st =[ c1 ]=> st' / s ->
+      st =[ if b then c1 else c2 end]=> st' / s
+  | E_IfFalse : forall st st' b c1 c2 s,
+      beval st b = false ->
+      st =[ c2 ]=> st' / s ->
+      st =[ if b then c1 else c2 end]=> st' / s
+  | E_WhileFalse : forall b st c,
+      beval st b = false ->
+      st =[ while b do c end ]=> st / SContinue
+  | E_WhileTrueContinue : forall st st' st'' b c s,
+      beval st b = true ->
+      st  =[ c ]=> st' / SContinue ->
+      st' =[ while b do c end ]=> st'' / s ->
+      st  =[ while b do c end ]=> st'' / SContinue
+  | E_WhileTrueBreak : forall st st' b c,
+      beval st b = true ->
+      st  =[ c ]=> st' / SBreak ->
+      st  =[ while b do c end ]=> st' / SContinue
+  | E_ForInitContinue : forall st st' st'' c1 b c2 c3 s,
+      st =[ c1 ]=> st' / SContinue ->
+      st' =[ while b do c2; c3 end ]=> st'' / s ->
+      st =[ for c1 , b , c2 do c3 end ]=> st'' / SContinue
+  | E_ForInitBreak : forall st st' c1 b c2 c3,
+      st =[ c1 ]=> st' / SBreak ->
+      st =[ for c1 , b , c2 do c3 end ]=> st' / SContinue
+
+  where "st '=[' c ']=>' st' '/' s" := (ceval c st s st').
+
+End ForImp.
 (* FILL IN HERE
 
     [] *)
