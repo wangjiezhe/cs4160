@@ -1629,332 +1629,62 @@ Qed.
 (** Using [var_not_used_in_aexp], formalize and prove a correct version
     of [subst_equiv_property]. *)
 
+Lemma subst_equiv_simpl : forall x1 a1 x2 a2,
+  cequiv <{ x1 := a1; x2 := a2 }>
+         <{ x1 := a1; x2 := subst_aexp x1 a1 a2 }> ->
+  forall st : state, 
+  aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2) =
+  aeval (x1 !-> aeval st a1; st) a2.
+Proof.
+  intros.
+  unfold cequiv in H.
+  specialize H with st
+    (x2 !-> aeval (x1 !-> aeval st a1; st) a2;
+    x1 !-> aeval st a1; st).
+  assert (st =[ x1 := a1; 
+                x2 := (subst_aexp x1 a1 a2)]=> 
+          (x2 !-> aeval (x1 !-> aeval st a1; st) a2; 
+           x1 !-> aeval st a1; st)) as H'.
+  {
+    apply H.
+    apply E_Seq with (x1 !-> aeval st a1; st); 
+      apply E_Asgn; reflexivity.
+  }
+  clear H.
+  repeat match goal with
+    [ H : _ =[ _ ]=> _ |- _ ] => inversion H; subst; clear H
+  end.
+  apply equal_f with x2 in H5.
+  repeat rewrite t_update_eq in H5.
+  exact H5.
+Qed.
+
+Ltac subst_intuition :=
+  repeat match goal with
+  | [ |- forall _, _ ] => intro
+  | [ H : ?P |- ?P ] => apply H
+  | [ |- ?P = ?P ] => reflexivity
+  | [ H : _ =[ _ ]=> _ |- _ ] => inversion H; subst; clear H; simpl in *
+  end.
+
 Theorem better_subst_equiv_property : forall x1 x2 a1 a2,
   var_not_used_in_aexp x1 a1 ->
   cequiv <{ x1 := a1; x2 := a2 }>
          <{ x1 := a1; x2 := subst_aexp x1 a1 a2 }>.
 Proof.
   intros.
-  unfold cequiv. split; intros.
-  - inversion H0; subst; clear H0.
-    eapply E_Seq. apply H3.
-    inversion H3; subst; clear H3.
-    generalize dependent st'.
-    generalize dependent st.
-    induction a2; simpl; auto.
-    + (* Search ((_ =? _)%string). *)
-      destruct (String.eqb_spec x1 x); auto.
-      intros. subst x.
-      inversion H6; subst; clear H6.
-      simpl. apply E_Asgn.
-      rewrite t_update_eq.
-      apply aeval_weakening. apply H.
-    + intros.
-      inversion H6; subst; clear H6.
-      apply E_Asgn. simpl.
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := (subst_aexp x1 a1 a2_1) ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) a2_1; x1 !-> aeval st a1; st)
-      ) as H1.
-        { apply IHa2_1. apply E_Asgn. reflexivity. }
-      inversion H1; subst; clear H1.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1) =
-        aeval (x1 !-> aeval st a1; st) a2_1
-      ) as Ha2_1.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_1)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_1;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H5. reflexivity.
-      }
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := (subst_aexp x1 a1 a2_2) ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) a2_2; x1 !-> aeval st a1; st)
-      ) as H2.
-        { apply IHa2_2. apply E_Asgn. reflexivity. }
-      inversion H2; subst; clear H2.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2) =
-        aeval (x1 !-> aeval st a1; st) a2_2
-      ) as Ha2_2.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_2)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_2;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H6. reflexivity.
-      }
-      rewrite Ha2_1. rewrite Ha2_2.
-      reflexivity.
-    + intros.
-      inversion H6; subst; clear H6.
-      apply E_Asgn. simpl.
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := (subst_aexp x1 a1 a2_1) ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) a2_1; x1 !-> aeval st a1; st)
-      ) as H1.
-        { apply IHa2_1. apply E_Asgn. reflexivity. }
-      inversion H1; subst; clear H1.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1) =
-        aeval (x1 !-> aeval st a1; st) a2_1
-      ) as Ha2_1.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_1)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_1;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H5. reflexivity.
-      }
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := (subst_aexp x1 a1 a2_2) ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) a2_2; x1 !-> aeval st a1; st)
-      ) as H2.
-        { apply IHa2_2. apply E_Asgn. reflexivity. }
-      inversion H2; subst; clear H2.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2) =
-        aeval (x1 !-> aeval st a1; st) a2_2
-      ) as Ha2_2.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_2)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_2;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H6. reflexivity.
-      }
-      rewrite Ha2_1. rewrite Ha2_2.
-      reflexivity.
-    + intros.
-      inversion H6; subst; clear H6.
-      apply E_Asgn. simpl.
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := (subst_aexp x1 a1 a2_1) ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) a2_1; x1 !-> aeval st a1; st)
-      ) as H1.
-        { apply IHa2_1. apply E_Asgn. reflexivity. }
-      inversion H1; subst; clear H1.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1) =
-        aeval (x1 !-> aeval st a1; st) a2_1
-      ) as Ha2_1.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_1)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_1;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H5. reflexivity.
-      }
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := (subst_aexp x1 a1 a2_2) ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) a2_2; x1 !-> aeval st a1; st)
-      ) as H2.
-        { apply IHa2_2. apply E_Asgn. reflexivity. }
-      inversion H2; subst; clear H2.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2) =
-        aeval (x1 !-> aeval st a1; st) a2_2
-      ) as Ha2_2.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_2)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_2;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H6. reflexivity.
-      }
-      rewrite Ha2_1. rewrite Ha2_2.
-      reflexivity.
-  - inversion H0; subst; clear H0.
-    eapply E_Seq. apply H3.
-    inversion H3; subst; clear H3.
-    generalize dependent st'.
-    generalize dependent st.
-    induction a2; simpl; auto.
-    + destruct (String.eqb_spec x1 x); auto.
-      intros. subst x.
-      inversion H6; subst; clear H6.
-      simpl. apply E_Asgn. simpl.
-      rewrite t_update_eq. symmetry.
-      apply aeval_weakening. apply H.
-    + intros.
-      inversion H6; subst; clear H6.
-      apply E_Asgn. simpl.
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := a2_1 ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1); x1 !-> aeval st a1; st)
-      ) as H1.
-        { apply IHa2_1. apply E_Asgn. reflexivity. }
-      inversion H1; subst; clear H1.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1) =
-        aeval (x1 !-> aeval st a1; st) a2_1
-      ) as Ha2_1.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_1)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_1;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H5. reflexivity.
-      }
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := a2_2 ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2); x1 !-> aeval st a1; st)
-      ) as H2.
-        { apply IHa2_2. apply E_Asgn. reflexivity. }
-      inversion H2; subst; clear H2.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2) =
-        aeval (x1 !-> aeval st a1; st) a2_2
-      ) as Ha2_2.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_2)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_2;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H6. reflexivity.
-      }
-      rewrite Ha2_1. rewrite Ha2_2.
-      reflexivity.
-    + intros.
-      inversion H6; subst; clear H6.
-      apply E_Asgn. simpl.
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := a2_1 ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1); x1 !-> aeval st a1; st)
-      ) as H1.
-        { apply IHa2_1. apply E_Asgn. reflexivity. }
-      inversion H1; subst; clear H1.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1) =
-        aeval (x1 !-> aeval st a1; st) a2_1
-      ) as Ha2_1.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_1)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_1;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H5. reflexivity.
-      }
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := a2_2 ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2); x1 !-> aeval st a1; st)
-      ) as H2.
-        { apply IHa2_2. apply E_Asgn. reflexivity. }
-      inversion H2; subst; clear H2.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2) =
-        aeval (x1 !-> aeval st a1; st) a2_2
-      ) as Ha2_2.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_2)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_2;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H6. reflexivity.
-      }
-      rewrite Ha2_1. rewrite Ha2_2.
-      reflexivity.
-    + intros.
-      inversion H6; subst; clear H6.
-      apply E_Asgn. simpl.
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := a2_1 ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1); x1 !-> aeval st a1; st)
-      ) as H1.
-        { apply IHa2_1. apply E_Asgn. reflexivity. }
-      inversion H1; subst; clear H1.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1) =
-        aeval (x1 !-> aeval st a1; st) a2_1
-      ) as Ha2_1.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_1);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_1)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_1;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H5. reflexivity.
-      }
-      assert (
-        (x1 !-> aeval st a1; st)
-        =[ x2 := a2_2 ]=>
-        (x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2); x1 !-> aeval st a1; st)
-      ) as H2.
-        { apply IHa2_2. apply E_Asgn. reflexivity. }
-      inversion H2; subst; clear H2.
-      assert (
-        aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2) =
-        aeval (x1 !-> aeval st a1; st) a2_2
-      ) as Ha2_2.
-      {
-        replace (aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2))
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) (subst_aexp x1 a1 a2_2);
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        replace (aeval (x1 !-> aeval st a1; st) a2_2)
-        with ((x2 !-> aeval (x1 !-> aeval st a1; st) a2_2;
-              x1 !-> aeval st a1; st) x2)
-        by (rewrite t_update_eq; reflexivity).
-        rewrite H6. reflexivity.
-      }
-      rewrite Ha2_1. rewrite Ha2_2.
-      reflexivity.
+  induction a2;
+    split;
+    try (apply subst_equiv_simpl with (st:=st) in IHa2_1;
+         apply subst_equiv_simpl with (st:=st) in IHa2_2);
+    subst_intuition;
+    try (eapply E_Seq; apply E_Asgn; simpl; auto).
+  - destruct (String.eqb_spec x1 x); auto.
+    subst x. rewrite t_update_eq.
+    apply aeval_weakening. apply H.
+  - destruct (String.eqb_spec x1 x); auto.
+    subst x. rewrite t_update_eq. symmetry.
+    apply aeval_weakening. apply H.
 Qed.
 (* [] *)
 
@@ -1965,7 +1695,14 @@ Qed.
 Theorem inequiv_exercise:
   ~ cequiv <{ while true do skip end }> <{ skip }>.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intro Contra.
+  unfold cequiv in Contra.
+  specialize Contra with empty_st empty_st.
+  assert (empty_st =[ skip ]=> empty_st) as H by (apply E_Skip).
+  apply Contra in H.
+  apply while_true_nonterm in H; auto.
+  apply refl_bequiv.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
