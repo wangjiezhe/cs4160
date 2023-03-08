@@ -2252,31 +2252,59 @@ Definition capprox (c1 c2 : com) : Prop := forall (st st' : state),
 (** Find two programs [c3] and [c4] such that neither approximates
     the other. *)
 
-Definition c3 : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
-Definition c4 : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition c3 : com := <{ X := 1 }>.
+Definition c4 : com := <{ X := 2 }>.
 
 Theorem c3_c4_different : ~ capprox c3 c4 /\ ~ capprox c4 c3.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  split; intro Contra.
+  - assert (empty_st =[ c3 ]=> (X !-> 1)) as H
+      by (apply E_Asgn; reflexivity).
+    apply Contra in H.
+    inversion H; subst; clear H. simpl in H4.
+    apply equal_f with X in H4. 
+    repeat rewrite t_update_eq in H4.
+    discriminate.
+  - assert (empty_st =[ c4 ]=> (X !-> 2)) as H
+      by (apply E_Asgn; reflexivity).
+    apply Contra in H.
+    inversion H; subst; clear H. simpl in H4.
+    apply equal_f with X in H4. 
+    repeat rewrite t_update_eq in H4.
+    discriminate.
+Qed.
 
 (** Find a program [cmin] that approximates every other program. *)
 
-Definition cmin : com
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition cmin : com :=
+  <{ while true do skip end }>.
 
 Theorem cmin_minimal : forall c, capprox cmin c.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  unfold capprox. unfold cmin. intros.
+  apply while_true_nonterm in H; try contradiction.
+  apply refl_bequiv.
+Qed.
 
 (** Finally, find a non-trivial property which is preserved by
     program approximation (when going from left to right). *)
 
-Definition zprop (c : com) : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition zprop (c : com) : Prop := cequiv c <{ skip }>.
 
 Theorem zprop_preserving : forall c c',
   zprop c -> capprox c c' -> zprop c'.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. 
+  unfold zprop. unfold capprox. unfold cequiv. intros.
+  split; intros Hc'.
+  - assert (st =[ c ]=> st) as Hc.
+      { apply H. apply E_Skip. }
+    apply H0 in Hc.
+    assert (st = st') as Heq.
+      { apply (ceval_deterministic _ _ _ _ Hc Hc'). }
+    rewrite Heq. apply E_Skip.
+  - inversion Hc'; subst; clear Hc'.
+    apply H0. apply H. apply E_Skip.
+Qed.
 (** [] *)
 
 (* 2022-08-08 17:31 *)
