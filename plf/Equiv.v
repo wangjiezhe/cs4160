@@ -2205,13 +2205,21 @@ Theorem for_while_equiv : forall b c1 c2 c3 st st' s,
 Proof.
   split; intros.
   - remember <{ for c1, b, c2 do c3 end }> as p eqn:Hp.
-    induction H; inversion Hp; subst; clear Hp.
+    destruct H; inversion Hp; subst; clear Hp.
     + (* E_ForInitContinue *)
       eapply E_SeqContinue. apply H. apply H0.
-      eapply E_WhileTrueContinue.
-      admit.
     + (* E_ForInitBreak *)
-Admitted.
+      eapply E_SeqBreak. apply H.
+  - inversion H; subst; clear H.
+    + inversion H6; subst; clear H6.
+      * apply E_ForInitContinue with st'; auto.
+        apply E_WhileFalse; auto.
+      * apply E_ForInitContinue with st'0; auto.
+        apply E_WhileTrueContinue with st'1; auto.
+      * apply E_ForInitContinue with st'0; auto.
+        apply E_WhileTrueBreak; auto.
+    + apply E_ForInitBreak; auto.
+Qed.
 
 End ForImp.
 (* FILL IN HERE

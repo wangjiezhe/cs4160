@@ -2678,11 +2678,11 @@ Inductive ceval : com -> state -> result -> state -> Prop :=
       st  =[ while b do c end ]=> st' / SContinue
   | E_ForInitContinue : forall st st' st'' c1 b c2 c3,
       st =[ c1 ]=> st' / SContinue ->
-      st' =[ while b do c2; c3 end ]=> st'' / SContinue ->
+      st' =[ while b do c3; c2 end ]=> st'' / SContinue ->
       st =[ for c1 , b , c2 do c3 end ]=> st'' / SContinue
   | E_ForInitBreak : forall st st' c1 b c2 c3,
       st =[ c1 ]=> st' / SBreak ->
-      st =[ for c1 , b , c2 do c3 end ]=> st' / SContinue
+      st =[ for c1 , b , c2 do c3 end ]=> st' / SBreak
 
   where "st '=[' c ']=>' st' '/' s" := (ceval c st s st').
 
