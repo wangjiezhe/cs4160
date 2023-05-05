@@ -1821,6 +1821,21 @@ Proof.
     apply E_Asgn. reflexivity.
 Qed.
 
+Hint Constructors ceval : core.
+Hint Transparent state total_map : core.
+
+Example ceval_example1':
+  empty_st =[
+     X := 2;
+     if (X <= 1)
+       then Y := 3
+       else Z := 4
+     end
+  ]=> (Z !-> 4 ; X !-> 2).
+Proof.
+  info_eauto.
+Qed.
+
 (** **** Exercise: 2 stars, standard (ceval_example2) *)
 Example ceval_example2:
   empty_st =[
@@ -1833,6 +1848,17 @@ Proof.
   - constructor. reflexivity.
   - apply E_Seq with (Y !-> 1; X !-> 0); constructor; reflexivity.
 Qed.
+
+Example ceval_example2':
+  empty_st =[
+    X := 0;
+    Y := 1;
+    Z := 2
+  ]=> (Z !-> 2 ; Y !-> 1 ; X !-> 0).
+Proof.
+  info_eauto 6.
+Qed.
+
 (** [] *)
 
 Set Printing Implicit.

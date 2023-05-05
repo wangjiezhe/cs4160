@@ -408,8 +408,8 @@ Theorem while_true : forall b c,
 Proof.
   intros b c Hb st st'.
   split; intros.
-  - apply while_true_nonterm in H. contradiction. assumption.
-  - apply while_true_nonterm in H. contradiction. unfold bequiv. reflexivity.
+  - apply while_true_nonterm in H. lia. assumption.
+  - apply while_true_nonterm in H. lia. unfold bequiv. reflexivity.
 Qed.
 (** [] *)
 
@@ -1989,7 +1989,7 @@ Proof.
   - simpl in H0.
     apply negb_false_iff in H0.
     apply eqb_eq in H0.
-    contradiction.
+    lia.
   - apply IHContra2.
     + inversion Contra1; subst; clear Contra1.
       assumption.
@@ -2012,12 +2012,12 @@ Proof.
     + simpl in H2.
       apply negb_true_iff in H2.
       apply eqb_neq in H2.
-      contradiction.
+      lia.
     + apply E_WhileFalse. apply H4.
     + simpl in H2.
       apply negb_true_iff in H2.
       apply eqb_neq in H2.
-      contradiction.
+      lia.
   - split; intros.
     + apply p1_may_diverge with st st' in n. contradiction.
     + apply p2_may_diverge with st st' in n. contradiction.
@@ -2282,7 +2282,7 @@ Definition cmin : com :=
 Theorem cmin_minimal : forall c, capprox cmin c.
 Proof.
   unfold capprox. unfold cmin. intros.
-  apply while_true_nonterm in H; try contradiction.
+  apply while_true_nonterm in H; try lia.
   apply refl_bequiv.
 Qed.
 
