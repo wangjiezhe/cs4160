@@ -11,6 +11,7 @@ From Coq Require Import Lia.
 From Coq Require Import Lists.List. Import ListNotations.
 From Coq Require Import Logic.FunctionalExtensionality.
 From PLF Require Export Imp.
+Set Default Goal Selector "!".
 
 (** *** Before You Get Started:
 
@@ -161,8 +162,8 @@ Proof.
     assumption.
   - (* <- *)
     apply E_Seq with st.
-    apply E_Skip.
-    assumption.
+    + apply E_Skip.
+    + assumption.
 Qed.
 
 (** **** Exercise: 2 stars, standard (skip_right)
@@ -180,7 +181,8 @@ Proof.
     inversion H5. subst.
     assumption.
   - eapply E_Seq.
-    apply H. apply E_Skip.
+    + apply H.
+    + apply E_Skip.
 Qed.
 (** [] *)
 
@@ -195,9 +197,13 @@ Proof.
   intros c1 c2.
   split; intros H.
   - (* -> *)
-    inversion H; subst. assumption. discriminate.
+    inversion H; subst.
+    + assumption.
+    + discriminate.
   - (* <- *)
-    apply E_IfTrue. reflexivity. assumption.  Qed.
+    apply E_IfTrue.
+    + reflexivity.
+    + assumption.  Qed.
 
 (** Of course, no (human) programmer would write a conditional whose
     condition is literally [true].  But they might write one whose
@@ -250,7 +256,7 @@ Proof.
   intros b c1 c2 Hb.
   split; intros H.
   - (* -> *)
-    inversion H. subst.
+    inversion H; subst.
     + (* b evaluates to true *)
       assumption.
     + (* b evaluates to false (contradiction) *)
@@ -408,8 +414,12 @@ Theorem while_true : forall b c,
 Proof.
   intros b c Hb st st'.
   split; intros.
-  - apply while_true_nonterm in H. lia. assumption.
-  - apply while_true_nonterm in H. lia. unfold bequiv. reflexivity.
+  - apply while_true_nonterm in H.
+    + lia.
+    + assumption.
+  - apply while_true_nonterm in H.
+    + lia.
+    + unfold bequiv. reflexivity.
 Qed.
 (** [] *)
 
@@ -430,16 +440,23 @@ Proof.
   - (* -> *)
     inversion Hce; subst.
     + (* loop doesn't run *)
-      apply E_IfFalse. assumption. apply E_Skip.
+      apply E_IfFalse.
+      * assumption.
+      * apply E_Skip.
     + (* loop runs *)
-      apply E_IfTrue. assumption.
-      apply E_Seq with (st' := st'0). assumption. assumption.
+      apply E_IfTrue.
+      * assumption.
+      * apply E_Seq with (st' := st'0).
+        -- assumption.
+        -- assumption.
   - (* <- *)
     inversion Hce; subst.
     + (* loop runs *)
       inversion H5; subst.
       apply E_WhileTrue with (st' := st'0).
-      assumption. assumption. assumption.
+      * assumption.
+      * assumption.
+      * assumption.
     + (* loop doesn't run *)
       inversion H5; subst. apply E_WhileFalse. assumption.  Qed.
 
@@ -1451,10 +1468,9 @@ Proof.
   induction c; simpl.
     - unfold cequiv. reflexivity.
     - apply CAsgn_congruence. apply optimize_0plus_aexp_sound.
-    - apply CSeq_congruence. apply IHc1. apply IHc2.
-    - apply CIf_congruence. apply optimize_0plus_bexp_sound.
-      apply IHc1. apply IHc2.
-    - apply CWhile_congruence. apply optimize_0plus_bexp_sound. apply IHc.
+    - apply CSeq_congruence; assumption.
+    - apply CIf_congruence; auto. apply optimize_0plus_bexp_sound.
+    - apply CWhile_congruence; auto. apply optimize_0plus_bexp_sound.
 Qed.
 
 (** Finally, let's define a compound optimizer on commands that first
@@ -1470,8 +1486,8 @@ Theorem optimizer_sound :
 Proof.
   unfold ctrans_sound. intros c. unfold optimizer.
   eapply trans_cequiv.
-  apply fold_constants_com_sound.
-  apply optimize_0plus_com_sound.
+  - apply fold_constants_com_sound.
+  - apply optimize_0plus_com_sound.
 Qed.
 (** [] *)
 
@@ -1833,7 +1849,11 @@ Proof. apply E_Havoc. Qed.
 
 Example havoc_example2 :
   empty_st =[ skip; havoc Z ]=> (Z !-> 42).
-Proof. eapply E_Seq. apply E_Skip. apply E_Havoc. Qed.
+Proof.
+  eapply E_Seq.
+  - apply E_Skip.
+  - apply E_Havoc.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_Check_rule_for_HAVOC : option (nat*string) := None.
@@ -2048,11 +2068,11 @@ Proof.
   {
     unfold p3.
     apply E_Seq with (Z !-> 1; X !->1).
-    apply E_Asgn. reflexivity.
-    apply E_WhileTrue with (Z !-> 0; X!-> 0; Z !-> 1; X !->1).
-    reflexivity.
-    eapply E_Seq; apply E_Havoc.
-    apply E_WhileFalse. reflexivity.
+    - apply E_Asgn. reflexivity.
+    - apply E_WhileTrue with (Z !-> 0; X!-> 0; Z !-> 1; X !->1).
+      + reflexivity.
+      + eapply E_Seq; apply E_Havoc.
+      + apply E_WhileFalse. reflexivity.
   }
   apply Contra in H.
   unfold p4 in H.
@@ -2143,25 +2163,25 @@ Proof.
   rewrite aeval_weakening by apply H0.
   replace (l2 !-> aeval st a2; l1 !-> aeval st a1; st)
     with (l1 !-> aeval (l2 !-> aeval st a2; st) a1; l2 !-> aeval st a2; st).
-  eapply E_Seq; apply E_Asgn; reflexivity.
-  rewrite aeval_weakening by apply H1.
-  apply functional_extensionality. intros x.
-  destruct (String.eqb_spec x l1), (String.eqb_spec x l2).
-  - subst x. contradiction.
-  - subst x.
-    rewrite t_update_eq.
-    (* Search (?m <> ?n -> ?n <> ?m). *)
-    rewrite t_update_neq by (apply not_eq_sym; apply H).
-    rewrite t_update_eq.
-    reflexivity.
-  - subst x.
-    rewrite t_update_neq by (apply H).
-    rewrite t_update_eq. rewrite t_update_eq. reflexivity.
-  - rewrite t_update_neq by (apply not_eq_sym; apply n).
-    rewrite t_update_neq by (apply not_eq_sym; apply n0).
-    rewrite t_update_neq by (apply not_eq_sym; apply n0).
-    rewrite t_update_neq by (apply not_eq_sym; apply n).
-    reflexivity.
+  - eapply E_Seq; apply E_Asgn; reflexivity.
+  - rewrite aeval_weakening by apply H1.
+    apply functional_extensionality. intros x.
+    destruct (String.eqb_spec x l1), (String.eqb_spec x l2).
+    + subst x. contradiction.
+    + subst x.
+      rewrite t_update_eq.
+      (* Search (?m <> ?n -> ?n <> ?m). *)
+      rewrite t_update_neq by (apply not_eq_sym; apply H).
+      rewrite t_update_eq.
+      reflexivity.
+    + subst x.
+      rewrite t_update_neq by (apply H).
+      rewrite t_update_eq. rewrite t_update_eq. reflexivity.
+    + rewrite t_update_neq by (apply not_eq_sym; apply n).
+      rewrite t_update_neq by (apply not_eq_sym; apply n0).
+      rewrite t_update_neq by (apply not_eq_sym; apply n0).
+      rewrite t_update_neq by (apply not_eq_sym; apply n).
+      reflexivity.
 Qed.
 
 Theorem swap_noninterfering_assignments: forall l1 l2 a1 a2,
@@ -2207,7 +2227,9 @@ Proof.
   - remember <{ for c1, b, c2 do c3 end }> as p eqn:Hp.
     destruct H; inversion Hp; subst; clear Hp.
     + (* E_ForInitContinue *)
-      eapply E_SeqContinue. apply H. apply H0.
+      eapply E_SeqContinue.
+      * apply H.
+      * apply H0.
     + (* E_ForInitBreak *)
       eapply E_SeqBreak. apply H.
   - inversion H; subst; clear H.
@@ -2262,14 +2284,14 @@ Proof.
       by (apply E_Asgn; reflexivity).
     apply Contra in H.
     inversion H; subst; clear H. simpl in H4.
-    apply equal_f with X in H4. 
+    apply equal_f with X in H4.
     repeat rewrite t_update_eq in H4.
     discriminate.
   - assert (empty_st =[ c4 ]=> (X !-> 2)) as H
       by (apply E_Asgn; reflexivity).
     apply Contra in H.
     inversion H; subst; clear H. simpl in H4.
-    apply equal_f with X in H4. 
+    apply equal_f with X in H4.
     repeat rewrite t_update_eq in H4.
     discriminate.
 Qed.
@@ -2293,7 +2315,7 @@ Definition zprop (c : com) : Prop := cequiv c <{ skip }>.
 
 Theorem zprop_preserving : forall c c',
   zprop c -> capprox c c' -> zprop c'.
-Proof. 
+Proof.
   unfold zprop. unfold capprox. unfold cequiv. intros.
   split; intros Hc'.
   - assert (st =[ c ]=> st) as Hc.
@@ -2307,4 +2329,4 @@ Proof.
 Qed.
 (** [] *)
 
-(* 2022-08-08 17:31 *)
+(* 2023-03-25 11:16 *)

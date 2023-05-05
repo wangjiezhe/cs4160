@@ -27,7 +27,7 @@ Ltac print_manual_grade A :=
 
 End Check.
 
-From PLF Require Import Maps.
+From LF Require Import Maps.
 Import Check.
 
 Goal True.
@@ -67,9 +67,12 @@ idtac "".
 idtac "Allowed Axioms:".
 idtac "functional_extensionality".
 idtac "FunctionalExtensionality.functional_extensionality_dep".
-idtac "CSeq_congruence".
-idtac "fold_constants_bexp_sound".
-idtac "succ_hastype_nat__hastype_nat".
+idtac "plus_le".
+idtac "le_trans".
+idtac "le_plus_l".
+idtac "add_le_cases".
+idtac "Sn_le_Sm__n_le_m".
+idtac "O_le_n".
 idtac "".
 idtac "".
 idtac "********** Summary **********".
@@ -91,6 +94,6 @@ idtac "".
 idtac "********** Advanced **********".
 Abort.
 
-(* 2022-08-08 17:31 *)
+(* 2023-03-25 11:11 *)
 
-(* 2022-08-08 17:31 *)
+(* 2023-03-25 11:12 *)
