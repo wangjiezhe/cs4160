@@ -1318,11 +1318,11 @@ Proof.
     rewrite <- andb_commutative.
     reflexivity.
   (* intros b c. intro H.
-  destruct b eqn:Eb. 
-  - destruct c eqn:Ec. 
+  destruct b eqn:Eb.
+  - destruct c eqn:Ec.
     + reflexivity.
     + rewrite <- H. reflexivity.
-  - destruct c eqn:Ec. 
+  - destruct c eqn:Ec.
     + reflexivity.
     + rewrite <- H. reflexivity. *)
 Qed.
@@ -1637,7 +1637,8 @@ Compute letter_comparison B F.
 Theorem letter_comparison_Eq :
   forall l, letter_comparison l l = Eq.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros []; reflexivity.
+Qed.
 (** [] *)
 
 (** We can follow the same strategy to define the comparison operation
@@ -1668,27 +1669,32 @@ Definition modifier_comparison (m1 m2 : modifier) : comparison :=
     of a suitable call to [letter_comparison] to end up with just [3]
     possibilities. *)
 
-Definition grade_comparison (g1 g2 : grade) : comparison
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition grade_comparison (g1 g2 : grade) : comparison :=
+  match g1, g2 with Grade l1 m1, Grade l2 m2 =>
+    match letter_comparison l1 l2 with
+    | Eq => modifier_comparison m1 m2
+    | T => T
+    end
+  end.
 
 (** The following "unit tests" of your [grade_comparison] function
     should pass after you have defined it correctly. *)
 
 Example test_grade_comparison1 :
   (grade_comparison (Grade A Minus) (Grade B Plus)) = Gt.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_grade_comparison2 :
   (grade_comparison (Grade A Minus) (Grade A Plus)) = Lt.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_grade_comparison3 :
   (grade_comparison (Grade F Plus) (Grade F Plus)) = Eq.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_grade_comparison4 :
   (grade_comparison (Grade B Minus) (Grade C Plus)) = Gt.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (** [] *)
 
@@ -1746,7 +1752,9 @@ Theorem lower_letter_lowers:
     letter_comparison F l = Lt ->
     letter_comparison (lower_letter l) l = Lt.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros.
+  destruct l; auto.
+Qed.
 
 (** [] *)
 
@@ -1765,50 +1773,47 @@ Proof.
     component of the grade -- it should consider only the modifier.
     You should definitely _not_ try to enumerate all of the
     cases. (Our solution is under 10 lines of code, total.) *)
-Definition lower_grade (g : grade) : grade
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition lower_grade (g : grade) : grade :=
+  match g with
+  | Grade l Plus => Grade l Natural
+  | Grade l Natural => Grade l Minus
+  | Grade F Minus => Grade F Minus
+  | Grade l Minus => Grade (lower_letter l) Plus
+  end.
 
 Example lower_grade_A_Plus :
   lower_grade (Grade A Plus) = (Grade A Natural).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example lower_grade_A_Natural :
   lower_grade (Grade A Natural) = (Grade A Minus).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example lower_grade_A_Minus :
   lower_grade (Grade A Minus) = (Grade B Plus).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example lower_grade_B_Plus :
   lower_grade (Grade B Plus) = (Grade B Natural).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example lower_grade_F_Natural :
   lower_grade (Grade F Natural) = (Grade F Minus).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example lower_grade_twice :
   lower_grade (lower_grade (Grade B Minus)) = (Grade C Natural).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example lower_grade_thrice :
   lower_grade (lower_grade (lower_grade (Grade B Minus))) = (Grade C Minus).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (** Note: Coq makes no distinction between an [Example] and a
     [Theorem]. We state this one as a [Theorem] only as a hint that we
     will use it in proofs below. *)
 Theorem lower_grade_F_Minus : lower_grade (Grade F Minus) = (Grade F Minus).
-Proof.
-(* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 (* GRADE_THEOREM 0.25: lower_grade_A_Plus *)
 (* GRADE_THEOREM 0.25: lower_grade_A_Natural *)
@@ -1839,7 +1844,9 @@ Theorem lower_grade_lowers :
     grade_comparison (Grade F Minus) g = Lt ->
     grade_comparison (lower_grade g) g = Lt.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. destruct g.
+  destruct l, m; auto.
+Qed.
 
 (** [] *)
 
@@ -1898,7 +1905,8 @@ Theorem no_penalty_for_mostly_on_time :
     (late_days <? 9 = true) ->
     apply_late_policy late_days g = g.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. rewrite apply_late_policy_unfold. rewrite H. reflexivity.
+Qed.
 
 (** [] *)
 
@@ -1917,7 +1925,9 @@ Theorem grade_lowered_once :
     (grade_comparison (Grade F Minus) g = Lt) ->
     (apply_late_policy late_days g) = (lower_grade g).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. rewrite apply_late_policy_unfold.
+  rewrite H. rewrite H0. reflexivity.
+Qed.
 
 (** [] *)
 End LateDays.
