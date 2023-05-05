@@ -14,17 +14,19 @@ ALLVFILES := \
 	Imp.v ImpTest.v \
 	Auto.v AutoTest.v \
 	AltAuto.v  AltAutoTest.v \
-	IndPrinciples.v IndPrinciplesTest.v
-
-# ImpParser.v ImpCEvalFun.v Extraction.v
-# ImpParserTest.v ImpCEvalFunTest.v ExtractionTest.v
+	IndPrinciples.v IndPrinciplesTest.v \
+	ImpParser.v ImpCEvalFun.v Extraction.v \
+	ImpParserTest.v ImpCEvalFunTest.v ExtractionTest.v
 
 build: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
 clean::
 	if [ -e Makefile.coq ]; then $(MAKE) -f Makefile.coq cleanall; fi
-	$(RM) $(wildcard Makefile.coq Makefile.coq.conf) imp.ml imp.mli imp1.ml imp1.mli imp2.ml imp2.mli
+	$(RM) $(wildcard Makefile.coq Makefile.coq.conf) imp.ml imp.mli imp1.ml imp1.mli imp2.ml imp2.mli impdriver
+
+impdriver: build
+	ocamlc -w -20 -w -26 -o impdriver imp.mli imp.ml impdriver.ml
 
 Makefile.coq:
 	coq_makefile $(COQMFFLAGS) -o Makefile.coq $(ALLVFILES)
