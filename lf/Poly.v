@@ -1056,8 +1056,8 @@ Qed.
 Definition fold_map {X Y: Type} (f: X -> Y) (l: list X) : list Y :=
   fold (fun x acc => f x :: acc) l [].
 
-(** Write down a theorem [fold_map_correct] in Coq stating that
-    [fold_map] is correct, and prove it.  (Hint: again, remember that
+(** Write down a theorem [fold_map_correct] stating that [fold_map] is
+    correct, and prove it in Coq.  (Hint: again, remember that
     [reflexivity] simplifies expressions a bit more aggressively than
     [simpl].) *)
 
@@ -1349,4 +1349,4 @@ Proof. reflexivity. Qed.
 End Church.
 End Exercises.
 
-(* 2022-08-08 17:13 *)
+(* 2023-03-25 11:11 *)

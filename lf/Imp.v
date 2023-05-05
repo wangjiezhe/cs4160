@@ -30,6 +30,8 @@ From Coq Require Import Lia.
 From Coq Require Import Lists.List. Import ListNotations.
 From Coq Require Import Strings.String.
 From LF Require Import Maps.
+(* https://coq.inria.fr/refman/proof-engine/tactics.html#coq:opt.Default-Goal-Selector *)
+Set Default Goal Selector "!".
 
 (* ################################################################# *)
 (** * Arithmetic and Boolean Expressions *)
@@ -746,8 +748,8 @@ Qed.
 (* ================================================================= *)
 (** ** The [lia] Tactic *)
 
-(** The [lia] tactic implements a decision procedure for a subset of
-    first-order logic called _Presburger arithmetic_.
+(** The [lia] tactic implements a decision procedure for integer linear
+    arithmetic, a subset of propositional logic and arithmetic.
 
     If the goal is a universally quantified formula made out of
 
@@ -1063,16 +1065,16 @@ Proof.
      apply E_ANum.
    + (* APlus *)
      apply E_APlus.
-      apply IHa1. reflexivity.
-      apply IHa2. reflexivity.
+     * apply IHa1. reflexivity.
+     * apply IHa2. reflexivity.
    + (* AMinus *)
      apply E_AMinus.
-      apply IHa1. reflexivity.
-      apply IHa2. reflexivity.
+     * apply IHa1. reflexivity.
+     * apply IHa2. reflexivity.
    + (* AMult *)
      apply E_AMult.
-      apply IHa1. reflexivity.
-      apply IHa2. reflexivity.
+     * apply IHa1. reflexivity.
+     * apply IHa2. reflexivity.
 Qed.
 
 (** Again, we can make the proof quite a bit shorter using some
@@ -1521,8 +1523,7 @@ Print fact_in_coq.
     - [Set Printing All] (undo with [Unset Printing All])
 
     These commands can also be used in the middle of a proof, to
-    elaborate the current goal and context.
- *)
+    elaborate the current goal and context. *)
 
 Unset Printing Notations.
 Print fact_in_coq.
@@ -1817,8 +1818,8 @@ Proof.
     apply E_Asgn. reflexivity.
   - (* if command *)
     apply E_IfFalse.
-    reflexivity.
-    apply E_Asgn. reflexivity.
+    + reflexivity.
+    + apply E_Asgn. reflexivity.
 Qed.
 
 (** **** Exercise: 2 stars, standard (ceval_example2) *)
@@ -2066,7 +2067,7 @@ Proof.
     destruct (IHc1 H1 st) as [st1 H1'].
     destruct (IHc2 H2 st1) as [st2 H2'].
     exists st2.
-    apply E_Seq with st1. apply H1'. apply H2'.
+    apply E_Seq with st1; assumption.
   - intros.
     simpl in H. apply andb_true_iff in H.
     destruct H as [H1 H2].
@@ -2074,9 +2075,9 @@ Proof.
     destruct (IHc2 H2 st) as [st2 H2'].
     destruct (beval st b) eqn:Hb.
     + exists st1.
-      apply E_IfTrue. apply Hb. apply H1'.
+      apply E_IfTrue; assumption.
     + exists st2.
-      apply E_IfFalse. apply Hb. apply H2'.
+      apply E_IfFalse; assumption.
   - inversion H.
 Qed.
 
@@ -2094,15 +2095,15 @@ Proof.
     destruct (IHno_whilesR1 st) as [st1 H1].
     destruct (IHno_whilesR2 st1) as [st2 H2].
     exists st2.
-    apply E_Seq with st1. apply H1. apply H2.
+    apply E_Seq with st1; assumption.
   - intros.
     destruct (IHno_whilesR1 st) as [st1 H1].
     destruct (IHno_whilesR2 st) as [st2 H2].
     destruct (beval st b) eqn:Hb.
     + exists st1.
-      apply E_IfTrue. apply Hb. apply H1.
+      apply E_IfTrue; assumption.
     + exists st2.
-      apply E_IfFalse. apply Hb. apply H2.
+      apply E_IfFalse; assumption.
 Qed.
 
 (* Do not modify the following line: *)
@@ -2473,7 +2474,7 @@ Theorem break_ignore : forall c st st' s,
      st = st'.
 Proof.
   intros.
-  inversion H. subst. clear H.
+  inversion H; subst; clear H.
   - inversion H2.
   - inversion H5. reflexivity.
 Qed.
@@ -2521,7 +2522,7 @@ Proof.
   induction H; intros;
     try (inversion Heqc_while; subst; clear Heqc_while).
   - rewrite H in H0. discriminate.
-  - apply IHceval2. apply H0. reflexivity.
+  - apply IHceval2; auto.
   - exists st. apply H1.
 Qed.
 (** [] *)
@@ -2691,4 +2692,4 @@ End ForImp.
 
     [] *)
 
-(* 2022-08-08 17:13 *)
+(* 2023-03-25 11:11 *)

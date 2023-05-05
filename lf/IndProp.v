@@ -611,7 +611,7 @@ Proof.
   - (* E = ev_0 *)
     unfold Even. exists 0. reflexivity.
   - (* E = ev_SS n' E'
-       with IH : Even E' *)
+       with IH : Even n' *)
     unfold Even in IH.
     destruct IH as [k Hk].
     rewrite Hk.
@@ -3552,4 +3552,4 @@ Proof.
 Qed.
 (** [] *)
 
-(* 2022-08-08 17:13 *)
+(* 2023-03-25 11:11 *)

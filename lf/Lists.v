@@ -494,7 +494,7 @@ Proof. reflexivity. Qed.
 (** **** Exercise: 2 stars, standard, especially useful (add_inc_count)
 
     Adding a value to a bag should increase the value's count by one.
-    State this as a theorem and prove it. *)
+    State this as a theorem and prove it in Coq. *)
 
 Theorem add_inc_count :
   forall v l, count v (add v l) = S (count v l).
@@ -1236,4 +1236,4 @@ Inductive baz : Type :=
 
 (** [] *)
 
-(* 2022-08-08 17:13 *)
+(* 2023-03-25 11:11 *)

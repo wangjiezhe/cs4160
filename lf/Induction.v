@@ -34,6 +34,11 @@ From LF Require Export Basics.
      - In Proof General or CoqIDE, the compilation should happen
        automatically when you submit the [Require] line above to PG.
 
+     - For VSCode users, open the terminal pane at the bottom
+       and then use the command line instructions below.
+       (If you downloaded the project setup .tgz file, just doing `make`
+       should build all the code.)
+
      - If you want to compile from the command line, generate a
        [Makefile] using the [coq_makefile] utility, which comes
        installed with Coq (if you obtained the whole volume as a
@@ -891,13 +896,11 @@ Fixpoint normalize (b:bin) : bin :=
 (** Finally, prove the main theorem. The inductive cases could be a
     bit tricky.
 
-    Hint 1: Start by trying to prove the main statement, see where you
+    Hint: Start by trying to prove the main statement, see where you
     get stuck, and see if you can find a lemma -- perhaps requiring
     its own inductive proof -- that will allow the main proof to make
-    progress. You might end up with a couple of these.
-
-    Hint 2: Lemma [double_incr_bin] that you proved above will be
-    helpful, too.*)
+    progress. We have one lemma for the [B0] case (which also makes
+    use of [double_incr_bin]) and another for the [B1] case. *)
 
 Lemma double_nat_bin : forall n, nat_to_bin (double n) = double_bin (nat_to_bin n).
 Proof.
@@ -931,4 +934,4 @@ Qed.
 
 (** [] *)
 
-(* 2022-06-16 11:18 *)
+(* 2023-03-25 11:11 *)
