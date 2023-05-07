@@ -1837,7 +1837,6 @@ Inductive ceval : com -> state -> state -> Prop :=
       st  =[ while b do c end ]=> st''
   | E_Havoc : forall st x n,
       st =[ havoc x ]=> (x !-> n ; st)
-(* FILL IN HERE *)
 
   where "st =[ c ]=> st'" := (ceval c st st').
 
