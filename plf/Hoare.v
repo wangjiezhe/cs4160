@@ -2511,18 +2511,15 @@ Qed.
     and [hoare_assume]. *)
 
 Theorem hoare_assert : forall P (b : bexp),
-  {{ P }} skip {{ b }} ->
+  P ->> b ->
   {{ P }} assert b {{ P /\ b}}.
 Proof.
   intros P b H st st' Hassert Hpre.
   inversion Hassert; subst; clear Hassert.
   - exists st. auto.
   - exfalso.
-    apply (H st (RNormal st)) in Hpre.
-    + destruct Hpre as [st' [He Hb]].
-      inversion He; subst st'; clear He.
-      inversion Hb. congruence.
-    + constructor.
+    apply H in Hpre.
+    inversion Hpre. congruence.
 Qed.
 
 Theorem hoare_assume : forall P (b : bexp),
@@ -2546,7 +2543,7 @@ Proof.
   eapply hoare_consequence_post.
   - eapply hoare_seq.
     + eapply hoare_seq.
-      * apply hoare_assert. apply hoare_skip.
+      * apply hoare_assert. eauto.
       * apply hoare_asgn.
     + eapply hoare_consequence_post.
       * apply hoare_assume.
