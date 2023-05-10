@@ -1952,10 +1952,9 @@ Proof.
   split.
   - apply hoare_asgn.
   - unfold assert_implies. intros.
-    eapply H in H0.
-    all: swap 1 2.
+    eapply H.
     + constructor. reflexivity.
-    + auto.
+    + assumption.
 Qed.
 (** [] *)
 
@@ -2098,8 +2097,99 @@ Qed.
     the rest of the formal development leading up to the
     [verification_correct] theorem. *)
 
-(* FILL IN HERE
+Module DcomImproved.
 
-    [] *)
+Inductive dcom : Type :=
+  | DCSkip
+  | DCAsgn (x : string) (a : aexp)
+  | DCSeq (c1 c2 : dcom)
+  | DCIf (b : bexp) (c1 c2 : dcom)
+  | DCWhile (b : bexp) (c : dcom) (Inv : Assertion).
+
+Inductive decorated : Type :=
+  | Decorated : Assertion -> dcom -> Assertion -> decorated.
+
+Notation "'skip'"  :=
+         DCSkip (in custom com at level 0) : dcom_scope.
+Notation "x := y"  :=
+         (DCAsgn x y)
+            (in custom com at level 0, x constr at level 0,
+             y at level 85, no associativity) : dcom_scope.
+Notation "x ; y" :=
+         (DCSeq x y)
+           (in custom com at level 90, right associativity) : dcom_scope.
+Notation "'if' x 'then' y 'else' z 'end'" :=
+         (DCIf x y z)
+           (in custom com at level 89, x at level 99,
+            y at level 99, z at level 99) : dcom_scope.
+Notation "'while' x 'do' y {{ Inv }} 'end'" :=
+         (DCWhile x y Inv)
+            (in custom com at level 89, x at level 99, y at level 99) : dcom_scope.
+
+Fixpoint extract (d : dcom) : com :=
+  match d with
+  | DCSkip           => CSkip
+  | DCSeq d1 d2      => CSeq (extract d1) (extract d2)
+  | DCAsgn X a       => CAsgn X a
+  | DCIf b d1 d2     => CIf b (extract d1) (extract d2)
+  | DCWhile b d _    => CWhile b (extract d)
+  end.
+
+Definition outer_triple_valid (dec : decorated) :=
+  match dec with
+  | Decorated P d Q => {{ P }} (extract d) {{ Q }}
+  end.
+
+Fixpoint verification_conditions (P : Assertion) (d : dcom) (Q : Assertion) : Prop :=
+  match d with
+  | DCSkip =>
+      (P ->> Q)
+  | DCSeq d1 d2 =>
+      exists (R : Assertion),
+      verification_conditions P d1 R
+      /\ verification_conditions R d2 Q
+  | DCAsgn X a =>
+      (P ->> Q [X |-> a])
+  | DCIf b d1 d2 =>
+      verification_conditions (P /\ b) d1 Q
+      /\ verification_conditions (P /\ ~b) d2 Q
+  | DCWhile b d Inv =>
+      (P ->> Inv)
+      /\ ((Inv /\ ~b)%assertion ->> Q)
+      /\ verification_conditions (Inv /\ b) d Inv
+  end.
+
+Theorem verification_correct : forall d P Q,
+  verification_conditions P d Q -> {{ P }} extract d {{ Q }}.
+Proof.
+  induction d; intros.
+  - eapply hoare_consequence_pre.
+    + apply hoare_skip.
+    + assumption.
+  - eapply hoare_consequence_pre.
+    + apply hoare_asgn.
+    + assumption.
+  - destruct H as [R [H1 H2]].
+    eapply hoare_seq; eauto.
+  - destruct H as [H1 H2].
+    apply hoare_if; eauto.
+  - destruct H as [Hpre [Hpost H]].
+    eapply hoare_consequence; eauto.
+    apply hoare_while.
+    eapply hoare_consequence_pre; eauto.
+Qed.
+
+Definition verification_conditions_dec (dec : decorated) : Prop :=
+  match dec with
+  | Decorated P d Q => verification_conditions P d Q
+  end.
+
+Corollary verification_correct_dec : forall dec,
+  verification_conditions_dec dec -> outer_triple_valid dec.
+Proof.
+  intros [P d]. apply verification_correct.
+Qed.
+
+End DcomImproved.
 
 (* 2023-03-25 11:16 *)
