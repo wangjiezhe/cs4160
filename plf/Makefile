@@ -5,10 +5,11 @@ ALLVFILES := \
 	Imp.v ImpTest.v \
 	Equiv.v EquivTest.v \
 	Hoare.v HoareTest.v \
-	Hoare2.v Hoare2Test.v
+	Hoare2.v Hoare2Test.v \
+	HoareAsLogic.v HoareAsLogicTest.v
 
-# HoareAsLogic.v Smallstep.v Types.v Stlc.v StlcProp.v MoreStlc.v Sub.v Typechecking.v Records.v References.v RecordSub.v
-# HoareAsLogicTest.v  SmallstepTest.v  TypesTest.v  StlcTest.v  StlcPropTest.v  MoreStlcTest.v  SubTest.v  TypecheckingTest.v  RecordsTest.v  ReferencesTest.v  RecordSubTest.v
+# Smallstep.v Types.v Stlc.v StlcProp.v MoreStlc.v Sub.v Typechecking.v Records.v References.v RecordSub.v
+# SmallstepTest.v  TypesTest.v  StlcTest.v  StlcPropTest.v  MoreStlcTest.v  SubTest.v  TypecheckingTest.v  RecordsTest.v  ReferencesTest.v  RecordSubTest.v
 
 # Norm.v PE.v
 # NormTest.v  PETest.v
