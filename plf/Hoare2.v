@@ -1910,7 +1910,12 @@ Definition is_wp P c Q :=
      while true do X := 0 end
      {{ X = 0 }}
 *)
-(* FILL IN HERE
+(* 1) X = 5
+   2) Y + Z = 5
+   3) True
+   4) (Z = 4 /\ X = 0) \/ (W = 3 /\ X <> 0)
+   5) False
+   6) True
 
     [] *)
 
@@ -1923,7 +1928,17 @@ Definition is_wp P c Q :=
 Theorem is_wp_example :
   is_wp (Y <= 4) <{X := Y + 1}> (X <= 5).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  split.
+  - eapply hoare_consequence_pre.
+    + apply hoare_asgn.
+    + assn_auto.
+  - simpl. unfold assert_implies.
+    intros P' Hhoare st Hp'.
+    eapply Hhoare in Hp'.
+    all: swap 1 2.
+    + constructor. simpl. reflexivity.
+    + rewrite t_update_eq in Hp'. lia.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, advanced, optional (hoare_asgn_weakest)
@@ -1934,7 +1949,14 @@ Proof.
 Theorem hoare_asgn_weakest : forall Q X a,
   is_wp (Q [X |-> a]) <{ X := a }> Q.
 Proof.
-(* FILL IN HERE *) Admitted.
+  split.
+  - apply hoare_asgn.
+  - unfold assert_implies. intros.
+    eapply H in H0.
+    all: swap 1 2.
+    + constructor. reflexivity.
+    + auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, advanced, optional (hoare_havoc_weakest)
@@ -1948,7 +1970,11 @@ Lemma hoare_havoc_weakest : forall (P Q : Assertion) (X : string),
   {{ P }} havoc X {{ Q }} ->
   P ->> havoc_pre X Q.
 Proof.
-(* FILL IN HERE *) Admitted.
+  unfold assert_implies, havoc_pre. intros.
+  eapply H in H0.
+  + apply H0.
+  + constructor.
+Qed.
 End Himp2.
 (** [] *)
 
@@ -1966,6 +1992,15 @@ End Himp2.
    This doesn't pass Coq's termination checker, but here is a
    slightly clunkier definition that does: *)
 
+(*
+Fixpoint fib n :=
+  match n with
+    | O => 1
+    | S O => 1
+    | S (S n as p) => fibonacci p + fibonacci n
+  end.
+*)
+
 Fixpoint fib n :=
   match n with
   | 0 => 1
@@ -1982,7 +2017,9 @@ Lemma fib_eqn : forall n,
   n > 0 ->
   fib n + fib (pred n) = fib (1 + n).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  destruct n; [lia | auto].
+Qed.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced, optional (fib)
@@ -1991,13 +2028,13 @@ Proof.
     variable [Y] when it terminates:
 
     X := 1;
-    Y := 1;
-    Z := 1;
+    Y := 1;               (* Y = fib 0 = fib (X-1) *)
+    Z := 1;               (* Z = fib 1 = fib X *)
     while X <> 1 + n do
-      T := Z;
-      Z := Z + Y;
-      Y := T;
-      X := 1 + X
+      T := Z;             (* T = fib X *)
+      Z := Z + Y;         (* Z = fib X + fib (X-1) = fib (X+1) *)
+      Y := T;             (* Y = fib X *)
+      X := 1 + X          (* Y = T = fib (X-1), Z = fib X *)
     end
 
     Fill in the following definition of [dfib] and prove that it
@@ -2014,32 +2051,40 @@ Definition T : string := "T".
 Definition dfib (n : nat) : decorated :=
   <{
     {{ True }} ->>
-    {{ FILL_IN_HERE }}
+    {{ 1 <> 0 /\ 1 = ap fib (1-1) /\ 1 = ap fib 1 }}
     X := 1
-                {{ FILL_IN_HERE }} ;
+                {{ X <> 0 /\ 1 = ap fib (X-1) /\ 1 = ap fib X }} ;
     Y := 1
-                {{ FILL_IN_HERE }} ;
+                {{ X <> 0 /\ Y = ap fib (X-1) /\ 1 = ap fib X }} ;
     Z := 1
-                {{ FILL_IN_HERE }} ;
+                {{ X <> 0 /\ Y = ap fib (X-1) /\ Z = ap fib X }} ;
     while X <> 1 + n do
-                  {{ FILL_IN_HERE }} ->>
-                  {{ FILL_IN_HERE }}
+                  {{ X <> 0 /\ Y = ap fib (X-1) /\ Z = ap fib X /\ X <> 1 + n }} ->>
+                  {{ 1+X <> 0 /\ Z = ap fib X /\ Z + Y = ap fib (1+X) }}
       T := Z
-                  {{ FILL_IN_HERE }};
+                  {{ 1+X <> 0 /\ T = ap fib X /\ Z + Y = ap fib (1+X) }};
       Z := Z + Y
-                  {{ FILL_IN_HERE }};
+                  {{ 1+X <> 0 /\ T = ap fib X /\ Z = ap fib (1+X) }};
       Y := T
-                  {{ FILL_IN_HERE }};
+                  {{ 1+X <> 0 /\ Y = ap fib X /\ Z = ap fib (1+X) }};
       X := 1 + X
-                  {{ FILL_IN_HERE }}
+                  {{ X <> 0 /\ Y = ap fib (X-1) /\ Z = ap fib X }}
     end
-    {{ FILL_IN_HERE }} ->>
+    {{ X <> 0 /\ Y = ap fib (X-1) /\ Z = ap fib X /\ X = 1 + n }} ->>
     {{ Y = fib n }}
    }>.
 
 Theorem dfib_correct : forall n,
   outer_triple_valid (dfib n).
-(* FILL IN HERE *) Admitted.
+Proof.
+  verify.
+  - destruct (st X) eqn:Hx.
+    + lia.
+    + replace (S n0 - 1) with n0 by (simpl; rewrite sub_0_r; reflexivity).
+      reflexivity.
+  - rewrite sub_0_r. reflexivity.
+  - simpl. rewrite sub_0_r. reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 5 stars, advanced, optional (improve_dcom)
