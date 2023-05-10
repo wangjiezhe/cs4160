@@ -2510,9 +2510,10 @@ Qed.
     to prove a simple program correct.  Name your rules [hoare_assert]
     and [hoare_assume]. *)
 
+(* forward-oriented *)
 Theorem hoare_assert : forall P (b : bexp),
   P ->> b ->
-  {{ P }} assert b {{ P /\ b}}.
+  {{ P }} assert b {{ P /\ b }}.
 Proof.
   intros P b H st st' Hassert Hpre.
   inversion Hassert; subst; clear Hassert.
@@ -2522,8 +2523,30 @@ Proof.
     inversion Hpre. congruence.
 Qed.
 
+(* backward-oriented *)
+Theorem hoare_assert_alt : forall P (b : bexp),
+  {{ P /\ b }} assert b {{ P }}.
+Proof.
+  intros P b st st' Hassert Hpre.
+  inversion Hassert; subst; clear Hassert.
+  - exists st. intuition.
+  - exfalso.
+    destruct Hpre as [ _ H'].
+    inversion H'. congruence.
+Qed.
+
+(* forward-oriented *)
 Theorem hoare_assume : forall P (b : bexp),
-  {{ P }} assume b {{ P /\ b}}.
+  {{ P }} assume b {{ P /\ b }}.
+Proof.
+  intros P b st st' Hassume Hpre.
+  inversion Hassume; subst; clear Hassume.
+  exists st. auto.
+Qed.
+
+(* backward-oriented *)
+Theorem hoare_assume_alt : forall P (b : bexp),
+  {{ b -> P }} assume b {{ P }}.
 Proof.
   intros P b st st' Hassume Hpre.
   inversion Hassume; subst; clear Hassume.

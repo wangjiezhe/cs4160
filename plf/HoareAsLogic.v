@@ -239,7 +239,16 @@ Qed.
 Theorem provable_true_post : forall c P,
     derivable P c True.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction c; intros.
+  - eapply H_Consequence_pre; constructor; auto.
+  - eapply H_Consequence_pre; constructor; auto.
+  - eapply H_Seq; eauto.
+  - eapply H_If; eauto.
+  - eapply H_Consequence.
+    + econstructor; auto.
+    + auto.
+    + auto.
+Qed.
 
 (** [] *)
 
@@ -251,7 +260,20 @@ Proof.
 Theorem provable_false_pre : forall c Q,
     derivable False c Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction c; intros.
+  - eapply H_Consequence_pre; try constructor; contradiction.
+  - eapply H_Consequence_pre; try constructor; contradiction.
+  - eapply H_Seq; eauto.
+  - eapply H_If.
+    + eapply H_Consequence_pre; auto; intuition.
+    + eapply H_Consequence_pre; auto; intuition.
+  - eapply H_Consequence.
+    + constructor.
+      eapply H_Consequence_pre; auto.
+      intros st [H _]. apply H.
+    + intros. apply H.
+    + intros st []. contradiction.
+Qed.
 
 (** [] *)
 
@@ -289,7 +311,15 @@ Proof.
 Theorem hoare_sound : forall P c Q,
   derivable P c Q -> valid P c Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  induction X.
+  - apply hoare_skip.
+  - apply hoare_asgn.
+  - eapply hoare_seq; eauto.
+  - apply hoare_if; auto.
+  - apply hoare_while; auto.
+  - eapply hoare_consequence; eauto.
+Qed.
 (** [] *)
 
 (** The proof of completeness is more challenging.  To carry out the
@@ -334,7 +364,9 @@ Proof. eauto. Qed.
 Lemma wp_seq : forall P Q c1 c2,
     derivable P c1 (wp c2 Q) -> derivable (wp c2 Q) c2 Q -> derivable P <{c1; c2}> Q.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros.
+  econstructor; eauto.
+Qed.
 
 (** [] *)
 
@@ -347,7 +379,8 @@ Proof.
 Lemma wp_invariant : forall b c Q,
     valid (wp <{while b do c end}> Q /\ b) c (wp <{while b do c end}> Q).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold valid; induction c; intuition; eauto.
+Qed.
 
 (** [] *)
 
@@ -369,7 +402,21 @@ Theorem hoare_complete: forall P c Q,
 Proof.
   unfold valid. intros P c. generalize dependent P.
   induction c; intros P Q HT.
-  (* FILL IN HERE *) Admitted.
+  - eapply H_Consequence_pre; try constructor; eauto.
+  - eapply H_Consequence_pre; try constructor; eauto.
+  - apply wp_seq; eauto.
+  - eapply H_If.
+    + apply IHc1. intuition. eauto.
+    + apply IHc2. intuition. eauto using Bool.not_true_is_false.
+  - eapply H_Consequence.
+    + eapply H_While.
+      eapply H_Consequence_pre.
+      * apply IHc. apply wp_invariant.
+      * intuition. eauto.
+    + unfold wp. intros.
+      eapply HT; eauto.
+    + unfold wp. intuition. eauto using Bool.not_true_is_false.
+Qed.
 
 (** [] *)
 
