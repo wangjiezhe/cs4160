@@ -2102,9 +2102,9 @@ Module DcomImproved.
 Inductive dcom : Type :=
   | DCSkip
   | DCAsgn (x : string) (a : aexp)
-  | DCSeq (c1 c2 : dcom)
-  | DCIf (b : bexp) (c1 c2 : dcom)
-  | DCWhile (b : bexp) (c : dcom) (Inv : Assertion).
+  | DCSeq (d1 d2 : dcom)
+  | DCIf (b : bexp) (d1 d2 : dcom)
+  | DCWhile (b : bexp) (d : dcom) (Inv : Assertion).
 
 Inductive decorated : Type :=
   | Decorated : Assertion -> dcom -> Assertion -> decorated.
@@ -2144,12 +2144,12 @@ Fixpoint verification_conditions (P : Assertion) (d : dcom) (Q : Assertion) : Pr
   match d with
   | DCSkip =>
       (P ->> Q)
+  | DCAsgn X a =>
+      (P ->> Q [X |-> a])
   | DCSeq d1 d2 =>
       exists (R : Assertion),
       verification_conditions P d1 R
       /\ verification_conditions R d2 Q
-  | DCAsgn X a =>
-      (P ->> Q [X |-> a])
   | DCIf b d1 d2 =>
       verification_conditions (P /\ b) d1 Q
       /\ verification_conditions (P /\ ~b) d2 Q
@@ -2188,6 +2188,82 @@ Corollary verification_correct_dec : forall dec,
   verification_conditions_dec dec -> outer_triple_valid dec.
 Proof.
   intros [P d]. apply verification_correct.
+Qed.
+
+
+(* weakest literal precondition *)
+Fixpoint wlp (d : dcom) (Q : Assertion) : Assertion :=
+  match d with
+  | DCSkip => Q
+  | DCAsgn X a => Q [X |-> a]
+  | DCSeq d1 d2 => wlp d1 (wlp d2 Q)
+  | DCIf b d1 d2 =>
+      (b -> wlp d1 Q) /\ (~b -> wlp d2 Q)
+  | DCWhile b d Inv =>
+      Inv /\
+      (forall st st', Inv st -> bassn b st -> st =[ extract d ]=> st' -> Inv st') /\
+      (* (forall st, Inv st -> bassn b st -> wlp d Inv st) /\ *)
+      (forall st, Inv st -> ~ bassn b st -> Q st)
+  end.
+
+(*
+Theorem wlp_monotonic : forall d P Q,
+  (P ->> Q) -> (wlp d P ->> wlp d Q).
+Proof.
+  induction d; simpl; intros P Q H; auto.
+  (* DCIf *)
+  - intros st [Ht Hf]. split.
+    + intros Hb.
+      apply (IHd1 _ _ H _ (Ht Hb)).
+    + intros Hb.
+      apply (IHd2 _ _ H _ (Hf Hb)).
+  - intros st [Hinv [Ht Hf]]. auto.
+Qed.
+*)
+
+(* From Coq Require Import Program.Equality. *)
+(* we can use [dependent induction] instead of [remember/generalize/induction] *)
+
+Theorem wlp_correct : forall d Q,
+  {{ wlp d Q }} extract d {{ Q }}.
+Proof.
+  intros d Q st st' H.
+  generalize dependent Q.
+  remember (extract d) as d' eqn:Hd.
+  generalize dependent d.
+  induction H; intros;
+    destruct d; inversion Hd; subst; clear Hd; simpl in *; auto.
+  - assert (forall Q, wlp d1 Q st -> Q st') as IH1.
+      { apply IHceval1. reflexivity. }
+    assert (forall Q, wlp d2 Q st' -> Q st'') as IH2.
+      { apply IHceval2. reflexivity. }
+    clear IHceval1 IHceval2.
+    apply (IH2 _ (IH1 _ H1)).
+  - eapply IHceval; intuition.
+  - rewrite <- not_true_iff_false in H.
+    eapply IHceval; intuition.
+  - rewrite <- not_true_iff_false in H.
+    intuition.
+  - rename b0 into b.
+    assert (forall Q, wlp d Q st -> Q st') as IH1.
+      { apply IHceval1. reflexivity. }
+    assert (forall Q, wlp (DCWhile b d Inv) Q st' -> Q st'') as IH2.
+      { apply IHceval2. reflexivity. }
+    clear IHceval1 IHceval2.
+    destruct H2 as [Hinv [Ht Hf]].
+    apply IH2. simpl. repeat split; eauto.
+Qed.
+
+Definition verification_conditions_wlp (P : Assertion) (d : dcom) (Q : Assertion) : Prop :=
+  P ->> wlp d Q.
+
+Theorem verification_correct_wlp : forall d P Q,
+  verification_conditions_wlp P d Q -> {{ P }} extract d {{ Q }}.
+Proof.
+  unfold verification_conditions_wlp. intros.
+  eapply hoare_consequence_pre.
+  - apply wlp_correct.
+  - assumption.
 Qed.
 
 End DcomImproved.
