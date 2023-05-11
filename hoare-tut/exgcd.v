@@ -72,6 +72,17 @@ Definition eval_relOP: relOP -> Z -> Z -> bool :=
   | LE => Zle_bool
  end.
 
+(*
+  e ::= v | b
+      | v binop v
+      | v relop v
+      | get v
+  v ::= VX | VY
+  b ::= true | false
+  binop ::= + | -
+  relop ::= = | <> | <
+*)
+
 (** Here is the abstract syntax of expressions. The semantics is given
 by [eval] below *)
 Inductive ExExpr: Type -> Type :=
@@ -116,10 +127,10 @@ Definition gcd :=
 [Zis_gcd]) *)
 Lemma Zgcd_minus: forall a b d:Z, Zis_gcd a (b - a) d -> Zis_gcd a b d.
 Proof.
-  intros a b d H; case H; constructor; intuition (auto with zarith).
-  replace b with (b-a+a)%Z.
+  intros a b d H.
+  destruct H. constructor; intuition (auto with zarith).
+  replace b with (b-a+a)%Z by lia.
   auto with zarith.
-  lia.
 Qed.
 
 Global Hint Resolve Zgcd_minus: zarith.
@@ -128,14 +139,16 @@ Global Hint Resolve Zgcd_minus: zarith.
 relation *)
 Lemma Zneq_bool_false: forall x y, Zneq_bool x y=false -> x=y.
 Proof.
- intros x y H0; apply Zcompare_Eq_eq; generalize H0; clear H0; unfold Zneq_bool. case (x ?= y)%Z; auto;
- try (intros; discriminate); auto.
+ intros.
+ unfold Zneq_bool in H.
+ rewrite <- Zcompare_Eq_iff_eq.
+ destruct (x ?= y)%Z; congruence.
 Qed.
 
 Lemma Zneq_bool_true: forall x y, Zneq_bool x y=true -> x<>y.
 Proof.
- intros x y; unfold Zneq_bool.
- intros H H0; subst.
+ intros x y H contra. subst.
+ unfold Zneq_bool in H.
  rewrite Z.compare_refl in H.
  discriminate.
 Qed.
@@ -150,9 +163,9 @@ Proof.
  intros x0 y0.
  apply PHL.soundness.
  simpl.
- intros e; intuition subst.
+ intros e. intuition subst.
  (** after PO generation, I provide the invariant and simplify the goal *)
- constructor 1 with (x:=fun e'=>
+ exists (x:=fun e'=>
   forall d, (Zis_gcd (VX e') (VY e') d)
               ->(Zis_gcd (VX e) (VY e) d)); simpl.
  intuition auto with zarith.

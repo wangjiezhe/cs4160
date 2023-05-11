@@ -27,7 +27,7 @@ Export Wf.
  In the following, we show that this definition is logically
  equivalent to [wp].
  *)
-Fixpoint synt_wp (prog: ImpProg) : Pred -> Pred 
+Fixpoint synt_wp (prog: ImpProg) : Pred -> Pred
  := fun post e =>
   match prog with
   | Iskip => post e
@@ -36,14 +36,14 @@ Fixpoint synt_wp (prog: ImpProg) : Pred -> Pred
           ((E.eval cond e)=true -> (synt_wp p1 post e))
        /\ ((E.eval cond e)=false -> (synt_wp p2 post e))
   | (Iseq p1 p2) => synt_wp p1 (synt_wp p2 post) e
-  | (Iwhile cond p) =>  
+  | (Iwhile cond p) =>
         exists inv:Pred,
         exists R:E.Env -> E.Env -> Prop,
              (well_founded R)
           /\ (inv e)
-          /\ (forall e', (inv e') 
+          /\ (forall e', (inv e')
                   -> (E.eval cond e')=false -> post e')
-          /\ (forall e', (inv e') 
+          /\ (forall e', (inv e')
                   -> (E.eval cond e')=true -> synt_wp p inv e')
           /\ (forall e0, (inv e0)
                   -> (E.eval cond e0)=true -> synt_wp p (fun e1 => R e1 e0) e0)
@@ -54,7 +54,7 @@ Fixpoint synt_wp (prog: ImpProg) : Pred -> Pred
 (** Monotonicity is also trivially satisfied by [wp].
     We need it here to prove the soundness.
 *)
-Lemma synt_wp_monotonic: 
+Lemma synt_wp_monotonic:
   forall (p: ImpProg) (post1 post2: Pred),
    (forall e, post1 e -> post2 e)
     -> forall e, (synt_wp p post1 e) -> (synt_wp p post2 e).
@@ -65,28 +65,28 @@ Qed.
 Global Hint Resolve synt_wp_monotonic: hoare.
 
 (** Below, a little tactic to decompose a pair in hypothesis [H]
-    by giving the name [n] to the first component. 
+    by giving the name [n] to the first component.
  *)
 Ltac dec2 n H := case H; clear H; intros n H.
 
-(** The property below is also satisfied by [wp] (using the fact that 
+(** The property below is also satisfied by [wp] (using the fact that
     the language is deterministic).
     We need it here to prove the soundness.
 *)
 Lemma synt_wp_conj:
  forall (p: ImpProg) (post1 post2: Pred) e,
-   (synt_wp p post1 e) -> (synt_wp p post2 e) 
+   (synt_wp p post1 e) -> (synt_wp p post2 e)
      -> (synt_wp p (fun e => post1 e /\ post2 e) e).
 Proof.
   induction p; simpl; try ((intuition auto); fail).
   (* Iseq *)
-  intros post1 post2 e H1 H2. 
+  intros post1 post2 e H1 H2.
   intros; eapply synt_wp_monotonic.
   2: apply (IHp1 _ _ _ H1 H2).
   simpl; intuition auto.
   (* Iwhile *)
-  intros post1 post2 e H1 H2. 
-  dec2 inv1 H1. 
+  intros post1 post2 e H1 H2.
+  dec2 inv1 H1.
   dec2 R1 H1.
   dec2 inv2 H2.
   intros;
@@ -101,7 +101,7 @@ Qed.
 Lemma wp_sound: forall prog post, synt_wp prog post |= prog [=post=].
 Proof.
  unfold wp.
- induction prog; simpl; try ((intuition eauto with hoare); fail). 
+ induction prog; simpl; try ((intuition eauto with hoare); fail).
  (* - case [Iif] *)
  intros post e.
  set (b:=E.eval cond e).
@@ -137,7 +137,7 @@ Qed.
 
 (** * Auxiliary lemmas for completeness
 
-   The proof of completeness requires to exhibit a variant. 
+   The proof of completeness requires to exhibit a variant.
    The purpose of the following lemmas is to build this variant.
 *)
 
@@ -167,13 +167,13 @@ Qed.
    alternative definition of [wlp].
 
 *)
-Definition aux_wlp (prog: ImpProg) : Pred -> Pred 
+Definition aux_wlp (prog: ImpProg) : Pred -> Pred
  := fun post e =>
   match prog with
   | Iskip => post e
   | (Iset A x expr) => post (E.upd x (E.eval expr e) e)
   | (Iif cond p1 p2) =>
-       forall e', exec e (if E.eval cond e then p1 else p2) e' 
+       forall e', exec e (if E.eval cond e then p1 else p2) e'
           -> post e'
   | (Iseq p1 p2) => forall e1 e2, exec e p1 e1 -> exec e1 p2 e2 -> post e2
   | (Iwhile cond p) => forall e', exec e (Iif cond (Iseq p (Iwhile cond p)) Iskip) e' -> post e'
@@ -193,11 +193,11 @@ Lemma exec_test_inversion:
      (exec e (Iset x expr) e') -> e'=(E.upd x (E.eval expr e) e).
 Proof.
   intros A x expr e e' H.
-  (** Here, try "[inversion H]" instead the tactic below. 
+  (** Here, try "[inversion H]" instead the tactic below.
       The generated goal is not directly provable. *)
   pattern e'; apply (exec_inversion H); simpl; auto.
 Qed.
- 
+
 (** Below, a little tactic to helps in applying [exec_inversion]. *)
 Ltac exec_inversion H :=
   match type of H with
@@ -209,7 +209,7 @@ Ltac exec_inversion H :=
 This property is probably not necessary to prove the correctness of my
 variant, but it simplifies the proof a lot.
 
-This lemma is a trivial induction over the first [exec] derivation, 
+This lemma is a trivial induction over the first [exec] derivation,
 provided the ad-hoc inversion tactic on the second [exec] derivation.
 *)
 Lemma exec_deterministic: forall ei p ef,
@@ -221,21 +221,21 @@ Proof.
   subst; auto.
 Qed.
 
-(** ** Definition of the variant 
-  Given a program [p] and a boolean expression [cond], the relation on environment 
+(** ** Definition of the variant
+  Given a program [p] and a boolean expression [cond], the relation on environment
   "[reduces cond p]" is the variant required by "[synt_wp (Iwhile cond p)]".
 
   I prove below that this relation is well-founded.
-*) 
+*)
 Definition reduces cond p e1 e0 :=
   (E.eval cond e0)=true /\ (exec e0 p e1) /\ exists ef, (exec e1 (Iwhile cond p) ef).
 
-(** To prove that "[reduces cond p]" is well-founded, I want to count  
+(** To prove that "[reduces cond p]" is well-founded, I want to count
     the number of execution of [p] in the computation of "[Iwhile cond p]".
     Indeed, as the language is deterministic, this number is unique.
 
-    Hence, "[execn n e (Iwhile cond p) e']" means that "[exec e (Iwhile cond p) e']" 
-    in a sequence of [n] execution of [p]. 
+    Hence, "[execn n e (Iwhile cond p) e']" means that "[exec e (Iwhile cond p) e']"
+    in a sequence of [n] execution of [p].
  *)
 Inductive execn: nat -> E.Env -> ImpProg -> E.Env -> Prop :=
  | execn_Iskip:
@@ -277,7 +277,7 @@ Proof.
   intros e1 H; unfold reduces in H.
   decompose [ex and] H; clear H.
   clear H2 H0 e0.
-  case (exec_execn H1).  
+  case (exec_execn H1).
   intros n.
   generalize cond p e1 x; clear cond p e1 x H1.
   elim n.
@@ -288,12 +288,12 @@ Proof.
   inversion_clear H.
   inversion_clear H0.
   set (b:=E.eval cond e0) in * |-.
-  cut (E.eval cond e0=b); auto.   
+  cut (E.eval cond e0=b); auto.
   generalize H; clear H; case b; simpl.
   (* case cond=true *)
-    intros H; 
+    intros H;
     inversion_clear H.
-    intros; 
+    intros;
     apply Acc_intro.
     intros e2 H3; unfold reduces in H3.
     intuition.
@@ -360,6 +360,6 @@ End TotalHoareLogic.
 
 (** "Tutorial on Hoare Logic" Library. Copyright 2007 Sylvain Boulme.
 
-This file is distributed under the terms of the 
- "GNU LESSER GENERAL PUBLIC LICENSE" version 3.  
+This file is distributed under the terms of the
+ "GNU LESSER GENERAL PUBLIC LICENSE" version 3.
 *)

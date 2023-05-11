@@ -2018,7 +2018,7 @@ Proof.
               ** rewrite t_update_eq.
                  rewrite t_update_neq by (intro; discriminate).
                  lia.
-      * unfold assert_implies. intuition.
+      * unfold assert_implies. tauto.
     + apply hoare_consequence_post with (Q':=(Y>0 /\ X+1>0)%assertion); simpl.
       * eapply hoare_seq.
         -- apply hoare_asgn.
@@ -2034,10 +2034,10 @@ Proof.
               ** rewrite t_update_eq.
                  rewrite t_update_neq by (intro; discriminate).
                  lia.
-      * unfold assert_implies. intuition.
+      * unfold assert_implies. tauto.
   - simpl. unfold assert_implies. intros.
     rewrite eqb_eq in H.
-    intuition.
+    tauto.
 Qed.
 
 End RepeatExercise.
@@ -2366,7 +2366,7 @@ Proof.
   split.
   - intros st st' Hassume Hpre.
     inversion Hassume; subst; clear Hassume.
-    exists st. intuition.
+    exists st. tauto.
   - intro contra.
     unfold hoare_triple in contra.
     specialize contra with (st:=(X!->1)) (r:=RError).
@@ -2529,7 +2529,7 @@ Theorem hoare_assert_alt : forall P (b : bexp),
 Proof.
   intros P b st st' Hassert Hpre.
   inversion Hassert; subst; clear Hassert.
-  - exists st. intuition.
+  - exists st. tauto.
   - exfalso.
     destruct Hpre as [ _ H'].
     inversion H'. congruence.

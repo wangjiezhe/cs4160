@@ -1687,15 +1687,15 @@ Proof.
   - rewrite andb_true_iff in H0.
     repeat rewrite negb_true_iff in H0.
     repeat rewrite eqb_neq in H0.
-    intuition.
+    tauto.
   - rewrite andb_true_iff in H0.
     repeat rewrite negb_true_iff in H0.
     repeat rewrite eqb_neq in H0.
-    intuition.
+    tauto.
   - rewrite andb_false_iff in H0.
     repeat rewrite negb_false_iff in H0.
     repeat rewrite eqb_eq in H0.
-    intuition.
+    tauto.
 Qed.
 (** [] *)
 

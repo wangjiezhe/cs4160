@@ -1,19 +1,19 @@
-(** 
+(**
 
  This file is part of the "Tutorial on Hoare Logic".
  For an introduction to this Coq library,
  see README #or <a href=index.html>index.html</a>#.
 
- This file is mainly verbous. It defines a functor
+ This file is mainly verbose. It defines a functor
  "[HoareLogic: ExprLang -> HoareLogicSem]".
- It is almost a copy/paste of definitions found in 
- #<a href=hoarelogicsemantics.html># 
- [hoarelogicsemantics]#</a>#. 
+ It is almost a copy/paste of definitions found in
+ #<a href=hoarelogicsemantics.html>#
+ [hoarelogicsemantics]#</a>#.
  (This is due to the lack of inheritance in the module system of Coq).
 
 
 *)
-  
+
 Set Implicit Arguments.
 
 Require Export hoarelogicsemantics.
@@ -28,7 +28,7 @@ Module HLD <: HoareLogicDefs with Module E:=E.
 
 Module E:=E.
 
-Inductive ImpProg: Type := 
+Inductive ImpProg: Type :=
   | Iskip: ImpProg
   | Iset (A:Type) (v:E.Var A) (expr:E.Expr A): ImpProg
   | Iif (cond:E.Expr bool) (p1 p2:ImpProg): ImpProg
@@ -36,46 +36,46 @@ Inductive ImpProg: Type :=
   | Iwhile (cond:E.Expr bool) (p:ImpProg): ImpProg.
 
 Inductive exec: E.Env -> ImpProg -> E.Env -> Prop :=
- | exec_Iskip: 
+ | exec_Iskip:
     forall e, (exec e Iskip e)
  | exec_Iset:
-    forall (A:Type) e x (expr: E.Expr A), 
+    forall (A:Type) e x (expr: E.Expr A),
      (exec e (Iset x expr) (E.upd x (E.eval expr e) e))
  | exec_Iif:
-    forall e (cond: E.Expr bool) p1 p2 e', 
-      (exec e (if (E.eval cond e) then p1 else p2) e') 
+    forall e (cond: E.Expr bool) p1 p2 e',
+      (exec e (if (E.eval cond e) then p1 else p2) e')
          -> (exec e (Iif cond p1 p2) e')
  | exec_Iseq:
     forall e p1 p2 e' e'',
-      (exec e p1 e') 
-       -> (exec e' p2 e'')    
+      (exec e p1 e')
+       -> (exec e' p2 e'')
          -> (exec e (Iseq p1 p2) e'')
  | exec_Iwhile:
-    forall e cond p e', 
+    forall e cond p e',
      (exec e (Iif cond (Iseq p (Iwhile cond p)) Iskip) e')
         -> (exec e (Iwhile cond p) e').
 
 Lemma exec_Iif_true:
-  forall e cond p1 p2 e', 
+  forall e cond p1 p2 e',
      (E.eval cond e)=true
-      -> (exec e p1 e') 
+      -> (exec e p1 e')
          -> (exec e (Iif cond p1 p2) e').
 Proof.
   intros e cond p1 p2 e' H1 H2.
   apply exec_Iif.
   rewrite H1; auto.
-Qed.  
+Qed.
 
 Lemma exec_Iif_false:
-  forall e cond p1 p2 e', 
+  forall e cond p1 p2 e',
      (E.eval cond e)=false
-      -> (exec e p2 e') 
+      -> (exec e p2 e')
          -> (exec e (Iif cond p1 p2) e').
 Proof.
   intros e cond p1 p2 e' H1 H2.
   apply exec_Iif.
   rewrite H1; auto.
-Qed.  
+Qed.
 
 Definition Pred := E.Env -> Prop.
 
@@ -94,8 +94,8 @@ End HLD.
 
 Export HLD.
 
-Module PHL<: HoareProofSystem := PartialHoareLogic(HLD). 
-Module THL<: HoareProofSystem := TotalHoareLogic(HLD). 
+Module PHL<: HoareProofSystem := PartialHoareLogic(HLD).
+Module THL<: HoareProofSystem := TotalHoareLogic(HLD).
 
 Import THL.
 
@@ -112,6 +112,6 @@ End HoareLogic.
 
 (** "Tutorial on Hoare Logic" Library. Copyright 2007 Sylvain Boulme.
 
-This file is distributed under the terms of the 
- "GNU LESSER GENERAL PUBLIC LICENSE" version 3.  
+This file is distributed under the terms of the
+ "GNU LESSER GENERAL PUBLIC LICENSE" version 3.
 *)

@@ -192,6 +192,8 @@ Inductive derivable : Assertion -> com -> Assertion -> Type :=
     (forall st, Q' st -> Q st) ->
     derivable P c Q.
 
+Hint Constructors derivable : core.
+
 (** We don't need to include axioms corresponding to
     [hoare_consequence_pre] or [hoare_consequence_post], because these
     can be proven easily from [H_Consequence]. *)
@@ -200,13 +202,15 @@ Lemma H_Consequence_pre : forall (P Q P': Assertion) c,
     derivable P' c Q ->
     (forall st, P st -> P' st) ->
     derivable P c Q.
-Proof. eauto using H_Consequence. Qed.
+Proof. eauto. Qed.
 
 Lemma H_Consequence_post  : forall (P Q Q' : Assertion) c,
     derivable P c Q' ->
     (forall st, Q' st -> Q st) ->
     derivable P c Q.
-Proof. eauto using H_Consequence. Qed.
+Proof. eauto. Qed.
+
+Hint Resolve H_Consequence_pre H_Consequence_post : core.
 
 (** As an example, let's construct a proof tree for
 
@@ -222,9 +226,7 @@ Example sample_proof :
     <{ X := X + 1; X := X + 2}>
     (fun st:state => st X = 3).
 Proof.
-  eapply H_Seq.
-  - apply H_Asgn.
-  - apply H_Asgn.
+  eauto.
 Qed.
 
 (** You can see how the structure of the proof script mirrors the structure
@@ -239,15 +241,7 @@ Qed.
 Theorem provable_true_post : forall c P,
     derivable P c True.
 Proof.
-  induction c; intros.
-  - eapply H_Consequence_pre; constructor; auto.
-  - eapply H_Consequence_pre; constructor; auto.
-  - eapply H_Seq; eauto.
-  - eapply H_If; eauto.
-  - eapply H_Consequence.
-    + econstructor; auto.
-    + auto.
-    + auto.
+  induction c; eauto.
 Qed.
 
 (** [] *)
@@ -261,17 +255,17 @@ Theorem provable_false_pre : forall c Q,
     derivable False c Q.
 Proof.
   induction c; intros.
-  - eapply H_Consequence_pre; try constructor; contradiction.
-  - eapply H_Consequence_pre; try constructor; contradiction.
+  - eapply H_Consequence_pre; eauto; contradiction.
+  - eapply H_Consequence_pre; eauto; contradiction.
   - eapply H_Seq; eauto.
   - eapply H_If.
-    + eapply H_Consequence_pre; auto; intuition.
-    + eapply H_Consequence_pre; auto; intuition.
+    + eapply H_Consequence_pre; intuition eauto. 
+    + eapply H_Consequence_pre; intuition eauto.
   - eapply H_Consequence.
     + constructor.
       eapply H_Consequence_pre; auto.
       intros st [H _]. apply H.
-    + intros. apply H.
+    + tauto.
     + intros st []. contradiction.
 Qed.
 
@@ -312,7 +306,7 @@ Theorem hoare_sound : forall P c Q,
   derivable P c Q -> valid P c Q.
 Proof.
   intros.
-  induction X.
+  induction X; eauto.
   - apply hoare_skip.
   - apply hoare_asgn.
   - eapply hoare_seq; eauto.
@@ -364,8 +358,7 @@ Proof. eauto. Qed.
 Lemma wp_seq : forall P Q c1 c2,
     derivable P c1 (wp c2 Q) -> derivable (wp c2 Q) c2 Q -> derivable P <{c1; c2}> Q.
 Proof.
-  intros.
-  econstructor; eauto.
+  eauto.
 Qed.
 
 (** [] *)
@@ -379,7 +372,7 @@ Qed.
 Lemma wp_invariant : forall b c Q,
     valid (wp <{while b do c end}> Q /\ b) c (wp <{while b do c end}> Q).
 Proof.
-  unfold valid; induction c; intuition; eauto.
+  unfold valid; induction c; intuition eauto.
 Qed.
 
 (** [] *)
@@ -402,20 +395,20 @@ Theorem hoare_complete: forall P c Q,
 Proof.
   unfold valid. intros P c. generalize dependent P.
   induction c; intros P Q HT.
-  - eapply H_Consequence_pre; try constructor; eauto.
-  - eapply H_Consequence_pre; try constructor; eauto.
+  - eauto.
+  - eauto.
   - apply wp_seq; eauto.
   - eapply H_If.
-    + apply IHc1. intuition. eauto.
-    + apply IHc2. intuition. eauto using Bool.not_true_is_false.
+    + apply IHc1. intuition eauto.
+    + apply IHc2. intuition eauto using Bool.not_true_is_false.
   - eapply H_Consequence.
     + eapply H_While.
       eapply H_Consequence_pre.
       * apply IHc. apply wp_invariant.
-      * intuition. eauto.
+      * intuition eauto.
     + unfold wp. intros.
       eapply HT; eauto.
-    + unfold wp. intuition. eauto using Bool.not_true_is_false.
+    + unfold wp. intuition eauto using Bool.not_true_is_false.
 Qed.
 
 (** [] *)
