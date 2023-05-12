@@ -126,7 +126,7 @@ Module SimpleArith1.
 
 (** Now, here is the corresponding _small-step_ evaluation relation.
 
-    
+
                      -------------------------------        (ST_PlusConstConst)
                      P (C v1) (C v2) --> C (v1 + v2)
 
@@ -201,7 +201,8 @@ Example test_step_2 :
           (C 2)
           (C 4)).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply ST_Plus2. apply ST_Plus2. apply ST_PlusConstConst.
+Qed.
 (** [] *)
 
 End SimpleArith1.
@@ -386,7 +387,7 @@ Inductive value : tm -> Prop :=
     definition of the [-->] relation to write [ST_Plus2] rule in a
     slightly more elegant way: *)
 
-(** 
+(**
                      -------------------------------        (ST_PlusConstConst)
                      P (C v1) (C v2) --> C (v1 + v2)
 
@@ -458,10 +459,16 @@ Inductive step : tm -> tm -> Prop :=
     formal version from scratch and just use the earlier one if you
     get stuck. *)
 
+Ltac invert H := inversion H; subst; clear H.
+
 Theorem step_deterministic :
   deterministic step.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold deterministic. intros x y1 y2 Hy1 Hy2.
+  generalize dependent y2.
+  induction Hy1; intros y2 Hy2;
+    invert Hy2; try solve_by_inverts 2; try f_equal; auto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -555,8 +562,7 @@ Lemma nf_is_value : forall t,
   normal_form step t -> value t.
 Proof. (* a corollary of [strong_progress]... *)
   unfold normal_form. intros t H.
-  assert (G : value t \/ exists t', t --> t').
-  { apply strong_progress. }
+  pose proof (strong_progress t) as G.
   destruct G as [G | G].
   - (* l *) apply G.
   - (* r *) contradiction.
@@ -615,7 +621,14 @@ Inductive step : tm -> tm -> Prop :=
 Lemma value_not_same_as_normal_form :
   exists v, value v /\ ~ normal_form step v.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  assert (v1 := 1).
+  assert (v2 := 2).
+  exists (P (P (C v1) (C v2)) (C v2)). split.
+  - apply v_funny.
+  - unfold normal_form. intros H. contradict H.
+    exists (P (C (v1+v2)) (C v2)).
+    apply ST_Plus1. apply ST_PlusConstConst.
+Qed.
 End Temp1.
 
 (** [] *)
@@ -650,7 +663,14 @@ Inductive step : tm -> tm -> Prop :=
 Lemma value_not_same_as_normal_form :
   exists v, value v /\ ~ normal_form step v.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  assert (v1 := 1).
+  exists (C v1).
+  split.
+  - apply v_const.
+  - unfold normal_form. intros H. contradict H.
+    exists (P (C v1) (C 0)).
+    apply ST_Funny.
+Qed.
 
 End Temp2.
 (** [] *)
@@ -685,7 +705,13 @@ Inductive step : tm -> tm -> Prop :=
 Lemma value_not_same_as_normal_form :
   exists t, ~ value t /\ normal_form step t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  assert (v1 := 1).
+  assert (v2 := 2).
+  exists (P (C v1) (P (C v1) (C v2))).
+  split.
+  - intros H. inversion H.
+  - intros H. solve_by_inverts 3.
+Qed.
 
 End Temp3.
 (** [] *)
@@ -730,7 +756,8 @@ Inductive step : tm -> tm -> Prop :=
 Definition bool_step_prop1 :=
   fls --> fls.
 
-(* FILL IN HERE *)
+Example bool_step_prop1_wrong : ~ bool_step_prop1.
+Proof. unfold bool_step_prop1. intros H. inversion H. Qed.
 
 Definition bool_step_prop2 :=
      test
@@ -740,7 +767,8 @@ Definition bool_step_prop2 :=
   -->
      tru.
 
-(* FILL IN HERE *)
+Example bool_step_prop2_wrong : ~ bool_step_prop2.
+Proof. unfold bool_step_prop2. intro H. inversion H. Qed.
 
 Definition bool_step_prop3 :=
      test
@@ -753,7 +781,8 @@ Definition bool_step_prop3 :=
        (test tru tru tru)
        fls.
 
-(* FILL IN HERE *)
+Example bool_step_prop3_correct : bool_step_prop3.
+Proof. unfold bool_step_prop3. apply ST_If. apply ST_IfTrue. Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_smallstep_bools : option (nat*string) := None.
@@ -767,13 +796,26 @@ Definition manual_grade_for_smallstep_bools : option (nat*string) := None.
 Theorem strong_progress_bool : forall t,
   value t \/ (exists t', t --> t').
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction t.
+  - left. apply v_tru.
+  - left. apply v_fls.
+  - right. destruct IHt1.
+    + destruct H.
+      * exists t2. apply ST_IfTrue.
+      * exists t3. apply ST_IfFalse.
+    + destruct H as [t1'].
+      exists (test t1' t2 t3). apply ST_If. apply H.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (step_deterministic) *)
 Theorem step_deterministic : deterministic step.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold deterministic. intros x y1 y2 Hy1 Hy2.
+  generalize dependent y2.
+  induction Hy1; intros y2 Hy2;
+    invert Hy2; try solve_by_invert; try f_equal; auto.
+Qed.
 (** [] *)
 
 Module Temp5.
@@ -809,7 +851,9 @@ Inductive step : tm -> tm -> Prop :=
   | ST_If : forall t1 t1' t2 t3,
       t1 --> t1' ->
       test t1 t2 t3 --> test t1' t2 t3
-  (* FILL IN HERE *)
+  | ST_ShortCircuit : forall t1 t2 t3,
+      t2 = t3 ->
+      test t1 t2 t3 --> t2
 
   where " t '-->' t' " := (step t t').
 
@@ -823,8 +867,7 @@ Definition bool_step_prop4 :=
 
 Example bool_step_prop4_holds :
   bool_step_prop4.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. unfold bool_step_prop4. apply ST_ShortCircuit. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (properties_of_altered_step)
@@ -839,20 +882,39 @@ Proof.
 
       Optional: prove your answer correct in Coq. *)
 
-(* FILL IN HERE
-   - Does a strong progress theorem hold? Write yes or no and
-     briefly (1 sentence) explain your answer.
+(* no. *)
+Theorem step_nondeterministic : ~ deterministic step.
+Proof.
+  unfold deterministic. intros H.
+  assert (test (test tru tru tru) tru tru --> test tru tru tru) as H1.
+  { apply ST_If. apply ST_IfTrue. }
+  assert (test (test tru tru tru) tru tru --> tru) as H2.
+  { apply ST_ShortCircuit. reflexivity. }
+  pose proof (H _ _ _ H1 H2) as contra.
+  inversion contra.
+Qed.
 
-     Optional: prove your answer correct in Coq.
-*)
+Theorem strong_progress_bool : forall t,
+  value t \/ (exists t', t --> t').
+Proof.
+  induction t.
+  - left. apply v_tru.
+  - left. apply v_fls.
+  - right. destruct IHt1.
+    + destruct H.
+      * exists t2. apply ST_IfTrue.
+      * exists t3. apply ST_IfFalse.
+    + destruct H as [t1'].
+      exists (test t1' t2 t3). apply ST_If. apply H.
+Qed.
 
-(* FILL IN HERE
-   - In general, is there any way we could cause strong progress to
+(* - In general, is there any way we could cause strong progress to
      fail if we took away one or more constructors from the original
      step relation? Write yes or no and briefly (1 sentence) explain
      your answer.
 
-(* FILL IN HERE *)
+(* yes. Remove [ST_If] will cause [test (test tru tru fls) tru fls] to be
+   a counterexample. *)
 *)
 (* Do not modify the following line: *)
 Definition manual_grade_for_properties_of_altered_step : option (nat*string) := None.
