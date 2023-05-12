@@ -2201,34 +2201,24 @@ Fixpoint wlp (d : dcom) (Q : Assertion) : Assertion :=
       (b -> wlp d1 Q) /\ (~b -> wlp d2 Q)
   | DCWhile b d Inv =>
       Inv /\
-      (forall st st', Inv st -> bassn b st -> st =[ extract d ]=> st' -> Inv st') /\
-      (* (forall st, Inv st -> bassn b st -> wlp d Inv st) /\ *)
-      (forall st, Inv st -> ~ bassn b st -> Q st)
+      (* The latter does not work here, since we have to ensure that
+         [Inv] is "really" an invariant.
+         In [HoareAsLogic.v], this is provided by lemma [wp_invariant]. *)
+      ({{ Inv /\ b}} extract d {{ Inv }}) /\
+      (* (Inv /\ b ->> wlp d Inv) /\ *)
+      (Inv /\ ~b ->> Q)
   end.
 
-(*
-Theorem wlp_monotonic : forall d P Q,
-  (P ->> Q) -> (wlp d P ->> wlp d Q).
-Proof.
-  induction d; simpl; intros P Q H; auto.
-  (* DCIf *)
-  - intros st [Ht Hf]. split.
-    + intros Hb.
-      apply (IHd1 _ _ H _ (Ht Hb)).
-    + intros Hb.
-      apply (IHd2 _ _ H _ (Hf Hb)).
-  - intros st [Hinv [Ht Hf]]. auto.
-Qed.
-*)
-
 (* From Coq Require Import Program.Equality. *)
-(* we can use [dependent induction] instead of [remember/generalize/induction] *)
+(* We can also use [dependent induction] instead of three lines with
+   [remember/generalize/induction]. *)
 
 Theorem wlp_correct : forall d Q,
   {{ wlp d Q }} extract d {{ Q }}.
 Proof.
   intros d Q st st' H.
   generalize dependent Q.
+  (* We have to do induction on [H] instead of just on [d]. *)
   remember (extract d) as d' eqn:Hd.
   generalize dependent d.
   induction H; intros;
@@ -2251,7 +2241,7 @@ Proof.
       { apply IHceval2. reflexivity. }
     clear IHceval1 IHceval2.
     destruct H2 as [Hinv [Ht Hf]].
-    apply IH2. simpl. repeat split; eauto.
+    apply IH2. simpl. repeat split; intuition eauto.
 Qed.
 
 Definition verification_conditions_wlp (P : Assertion) (d : dcom) (Q : Assertion) : Prop :=
