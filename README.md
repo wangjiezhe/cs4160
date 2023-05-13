@@ -1,12 +1,14 @@
 # Software Foundations in Coq
 
-Textbook: [Software Foundations Logo VOLUME 1: LOGICAL FOUNDATIONS](https://softwarefoundations.cis.upenn.edu/lf-current/toc.html)
-
-Chinese Version: [软件基础 第一卷 逻辑基础](https://coq-zh.github.io/SF-zh/lf-current/toc.html)
+Textbook: [Software Foundations](https://softwarefoundations.cis.upenn.edu)
 
 Videos: [Software Foundations in Coq](https://www.youtube.com/playlist?list=PLre5AT9JnKShFK9l9HYzkZugkJSsXioFs)
 
 Source Code: [clarksmr/sf-lectures](https://github.com/clarksmr/sf-lectures)
+
+Chinese Version: [软件基础](https://coq-zh.github.io/SF-zh)
+
+Slides: [软件科学基础](https://xiongyingfei.github.io/SF/2022/lectures.html)
 
 ## Coq installation
 
