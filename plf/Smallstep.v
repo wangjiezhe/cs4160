@@ -1967,14 +1967,63 @@ Definition stack_multistep st := multi (stack_step st).
     what it means for the compiler to be correct according to the
     stack machine small step semantics, and then prove it. *)
 
-(* Copy your definition of s_compile here *)
+Fixpoint s_compile (e : aexp) : list sinstr :=
+  match e with
+  | ANum n => [SPush n]
+  | AId x => [SLoad x]
+  | APlus a1 a2 => (s_compile a1) ++ (s_compile a2) ++ [SPlus]
+  | AMinus a1 a2 => (s_compile a1) ++ (s_compile a2) ++ [SMinus]
+  | AMult a1 a2 => (s_compile a1) ++ (s_compile a2) ++ [SMult]
+  end.
 
-Definition compiler_is_correct_statement : Prop
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition compiler_is_correct_statement : Prop :=
+  forall (st : state) (e : aexp),
+  stack_multistep st (s_compile e, []) ([], [ aeval st e ]).
+
+Lemma compiler_is_correct_aux :
+  forall (st : state) (e : aexp) (p : prog) (init : stack),
+  stack_multistep st (s_compile e ++ p, init) (p, aeval st e :: init).
+Proof.
+  intros st e.
+  unfold stack_multistep.
+  induction e; simpl; intros.
+  - eapply multi_step.
+    { apply SS_Push. }
+    apply multi_refl.
+  - eapply multi_step.
+    { apply SS_Load. }
+    apply multi_refl.
+  - eapply multi_trans.
+    { rewrite <- app_assoc. apply IHe1. }
+    eapply multi_trans.
+    { rewrite <- app_assoc. apply IHe2. }
+    eapply multi_step.
+    { simpl. apply SS_Plus. }
+    apply multi_refl.
+  - eapply multi_trans.
+    { rewrite <- app_assoc. apply IHe1. }
+    eapply multi_trans.
+    { rewrite <- app_assoc. apply IHe2. }
+    eapply multi_step.
+    { simpl. apply SS_Minus. }
+    apply multi_refl.
+  - eapply multi_trans.
+    { rewrite <- app_assoc. apply IHe1. }
+    eapply multi_trans.
+    { rewrite <- app_assoc. apply IHe2. }
+    eapply multi_step.
+    { simpl. apply SS_Mult. }
+    apply multi_refl.
+Qed.
 
 Theorem compiler_is_correct : compiler_is_correct_statement.
 Proof.
-(* FILL IN HERE *) Admitted.
+  unfold compiler_is_correct_statement.
+  intros.
+  replace (s_compile e) with (s_compile e ++ [])
+    by (apply app_nil_r).
+  apply compiler_is_correct_aux.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -2064,7 +2113,10 @@ Theorem normalize_ex : exists e',
   (P (C 3) (P (C 2) (C 1)))
   -->* e' /\ value e'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  eexists. split.
+  - normalize.
+  - apply v_const.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard, optional (normalize_ex')
@@ -2075,7 +2127,16 @@ Theorem normalize_ex' : exists e',
   (P (C 3) (P (C 2) (C 1)))
   -->* e' /\ value e'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  exists (C 6). split.
+  - apply multi_step with (P (C 3) (C 3)).
+    { apply ST_Plus2.
+      - apply v_const.
+      - apply ST_PlusConstConst. }
+    apply multi_step with (C (3 + 3)).
+    { apply ST_PlusConstConst. }
+    apply multi_refl.
+  - apply v_const.
+Qed.
 (** [] *)
 
 (* 2023-03-25 11:16 *)
