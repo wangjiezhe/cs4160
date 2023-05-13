@@ -253,14 +253,26 @@ Qed.
     Use [value_is_nf] to show that the [step] relation is also
     deterministic. *)
 
+Ltac solve_by_inverts' n :=
+  match goal with
+  | H : nvalue ?x, H': ?x --> _ |- _ =>
+    pose proof (value_is_nf _ (or_intror H)); exfalso; eauto
+  | H : ?T |- _ =>
+    match type of T with Prop =>
+      solve [
+        inversion H;
+        match n with S (S (?n')) => subst; try f_equal; eauto; solve_by_inverts' (S n') end ]
+    end
+  end.
+
 Theorem step_deterministic:
   deterministic step.
 Proof with eauto.
   unfold deterministic.
   intros x y1 y2 Hy1 Hy2.
   generalize dependent y2.
-  induction Hy1; simpl; intros.
-  - invert Hy2... invert H3.
+  induction Hy1; simpl; intros; try solve_by_inverts' 3.
+  (* - invert Hy2... invert H3.
   - invert Hy2... invert H3.
   - invert Hy2...
     + invert Hy1.
@@ -282,7 +294,7 @@ Proof with eauto.
     + invert Hy1.
     + invert Hy1.
       pose proof (value_is_nf _ (or_intror H0)). exfalso...
-    + f_equal...
+    + f_equal... *)
 Qed.
 (** [] *)
 
