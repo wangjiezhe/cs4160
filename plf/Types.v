@@ -199,7 +199,11 @@ Hint Unfold stuck : core.
 Example some_term_is_stuck :
   exists t, stuck t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  exists <{succ true}>. split.
+  - unfold step_normal_form, normal_form.
+    intro H. solve_by_inverts 3.
+  - intro H. solve_by_inverts 3.
+Qed.
 (** [] *)
 
 (** However, although values and normal forms are _not_ the same in
@@ -211,7 +215,15 @@ Proof.
 Lemma value_is_nf : forall t,
   value t -> step_normal_form t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold step_normal_form, normal_form.
+  induction t; intros H []; try solve_by_inverts 2.
+  destruct H.
+  - invert H.
+  - invert H. invert H0. (* intuition eauto. *)
+    apply IHt.
+    + right. apply H2.
+    + exists t1'. apply H1.
+Qed.
 
 (** (Hint: You will reach a point in this proof where you need to
     use an induction to reason about a term that is known to be a
@@ -223,6 +235,19 @@ Proof.
 
     [] *)
 
+Lemma value_is_nf' : forall t,
+  value t -> step_normal_form t.
+Proof.
+  unfold step_normal_form, normal_form.
+  intros t H.
+  destruct H.
+  - intros C. destruct C. invert H0; solve_by_inverts 2.
+  - induction H; intros []; try solve_by_inverts 2.
+    invert H0.
+    apply IHnvalue.
+    exists t1'. apply H2.
+Qed.
+
 (** **** Exercise: 3 stars, standard, optional (step_deterministic)
 
     Use [value_is_nf] to show that the [step] relation is also
@@ -231,7 +256,34 @@ Proof.
 Theorem step_deterministic:
   deterministic step.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  unfold deterministic.
+  intros x y1 y2 Hy1 Hy2.
+  generalize dependent y2.
+  induction Hy1; simpl; intros.
+  - invert Hy2... invert H3.
+  - invert Hy2... invert H3.
+  - invert Hy2...
+    + invert Hy1.
+    + invert Hy1.
+    + f_equal...
+  - invert Hy2. f_equal...
+  - invert Hy2... invert H0.
+  - invert Hy2... invert H1.
+    pose proof (value_is_nf _ (or_intror H)). exfalso...
+  - invert Hy2.
+    + invert Hy1.
+    + invert Hy1.
+      pose proof (value_is_nf _ (or_intror H0)). exfalso...
+    + f_equal...
+  - invert Hy2... invert H0.
+  - invert Hy2... invert H1.
+    pose proof (value_is_nf _ (or_intror H)). exfalso...
+  - invert Hy2.
+    + invert Hy1.
+    + invert Hy1.
+      pose proof (value_is_nf _ (or_intror H0)). exfalso...
+    + f_equal...
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -255,7 +307,7 @@ Inductive ty : Type :=
     written to the left of the turnstile.  For the moment, the context
     is always empty.
 
-    
+
                            -----------------                   (T_True)
                            |-- true \in Bool
 
