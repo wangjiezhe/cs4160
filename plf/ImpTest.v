@@ -27,7 +27,7 @@ Ltac print_manual_grade A :=
 
 End Check.
 
-From LF Require Import Imp.
+From PLF Require Import Imp.
 Import Check.
 
 Goal True.

@@ -27,7 +27,7 @@ Ltac print_manual_grade A :=
 
 End Check.
 
-From LF Require Import Maps.
+From PLF Require Import Maps.
 Import Check.
 
 Goal True.
