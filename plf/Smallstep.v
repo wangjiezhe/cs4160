@@ -1068,8 +1068,7 @@ Qed.
 (** **** Exercise: 1 star, standard, optional (test_multistep_2) *)
 Lemma test_multistep_2:
   C 3 -->* C 3.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. apply multi_refl. Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, standard, optional (test_multistep_3) *)
@@ -1077,8 +1076,7 @@ Lemma test_multistep_3:
       P (C 0) (C 3)
    -->*
       P (C 0) (C 3).
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. apply multi_refl. Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard (test_multistep_4) *)
@@ -1093,7 +1091,22 @@ Lemma test_multistep_4:
         (C 0)
         (C (2 + (0 + 3))).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  eapply multi_step.
+  {
+    apply ST_Plus2.
+    - apply v_const.
+    - apply ST_Plus2.
+      + apply v_const.
+      + apply ST_PlusConstConst.
+  }
+  eapply multi_step.
+  {
+    apply ST_Plus2.
+    - apply v_const.
+    - apply ST_PlusConstConst.
+  }
+  apply multi_refl.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -1111,7 +1124,7 @@ Definition normal_form_of (t t' : tm) :=
     deterministic -- i.e., a given term can take a single step in
     at most one way.  It follows from this that, if [t] can reach
     a normal form, then this normal form is unique.  In other words, we
-    can actually pronounce [normal_form t t'] as "[t'] is _the_
+    can actually pronounce [normal_form_of t t'] as "[t'] is _the_
     normal form of [t]." *)
 
 (** **** Exercise: 3 stars, standard, optional (normal_forms_unique) *)
@@ -1123,7 +1136,17 @@ Proof.
   intros x y1 y2 P1 P2.
   destruct P1 as [P11 P12].
   destruct P2 as [P21 P22].
-  (* FILL IN HERE *) Admitted.
+  generalize dependent y2.
+  induction P11; intros.
+  - invert P21.
+    + reflexivity.
+    + exfalso. apply P12. exists y. apply H.
+  - apply IHP11; auto.
+    invert P21.
+    + exfalso. apply P22. exists y. apply H.
+    + pose proof (step_deterministic _ _ _ H H0).
+      subst. assumption.
+Qed.
 (** [] *)
 
 (** Indeed, something stronger is true for this language (though
@@ -1160,7 +1183,15 @@ Lemma multistep_congr_2 : forall v1 t2 t2',
      t2 -->* t2' ->
      P v1 t2 -->* P v1 t2'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros v1 t2 t2' H1 H.
+  induction H.
+  - apply multi_refl.
+  - eapply multi_step.
+    + apply ST_Plus2.
+      * apply H1.
+      * apply H.
+    + apply IHmulti.
+Qed.
 (** [] *)
 
 (** With these lemmas in hand, the main proof is a straightforward
@@ -1270,7 +1301,19 @@ Theorem eval__multistep : forall t n,
     includes [-->]. *)
 
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros t n H.
+  induction H.
+  - apply multi_refl.
+  - apply multi_trans with (P (C v1) t2).
+    + apply multistep_congr_1. apply IHeval1.
+    + apply multi_trans with (P (C v1) (C v2)).
+      * apply multistep_congr_2.
+        -- apply v_const.
+        -- apply IHeval2.
+      * apply multi_step with (C (v1 + v2)).
+        -- apply ST_PlusConstConst.
+        -- apply multi_refl.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (eval__multistep_inf)
@@ -1294,7 +1337,14 @@ Lemma step__eval : forall t t' n,
      t  ==> n.
 Proof.
   intros t t' n Hs. generalize dependent n.
-  (* FILL IN HERE *) Admitted.
+  induction Hs; intros.
+  - invert H.
+    apply E_Plus; apply E_Const.
+  - invert H.
+    apply E_Plus; auto.
+  - invert H0.
+    apply E_Plus; auto.
+Qed.
 (** [] *)
 
 (** The fact that small-step reduction implies big-step evaluation is now
@@ -1310,7 +1360,16 @@ Proof.
 Theorem multistep__eval : forall t t',
   normal_form_of t t' -> exists n, t' = C n /\ t ==> n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold normal_form_of.
+  intros t t' [Hms Hnf].
+  induction Hms.
+  - apply nf_same_as_value in Hnf. destruct Hnf as [v].
+    exists v. split; auto.
+    apply E_Const.
+  - apply IHHms in Hnf. destruct Hnf as [v [Hz Hy]]. subst.
+    exists v. split; auto.
+    eapply step__eval; eauto.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -1327,7 +1386,19 @@ Proof.
 Theorem evalF_eval : forall t n,
   evalF t = n <-> t ==> n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction t; simpl; intros.
+  - split.
+    + intros H. subst. apply E_Const.
+    + intros H. invert H. reflexivity.
+  - split.
+    + intros H. subst. apply E_Plus.
+      * apply IHt1. reflexivity.
+      * apply IHt2. reflexivity.
+    + intros H. invert H.
+      apply IHt1 in H2.
+      apply IHt2 in H4.
+      subst. reflexivity.
+Qed.
 (** [] *)
 
 (** We've considered arithmetic and conditional expressions
@@ -1381,7 +1452,12 @@ Inductive step : tm -> tm -> Prop :=
 (** **** Exercise: 3 stars, standard (combined_step_deterministic) *)
 Theorem combined_step_deterministic: (deterministic step) \/ ~ (deterministic step).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  left.
+  unfold deterministic. intros x y1 y2 Hy1 Hy2.
+  generalize dependent y2.
+  induction Hy1; intros y2 Hy2;
+    invert Hy2; try solve_by_inverts 2; try f_equal; auto.
+Qed.
 
 (** [] *)
 
@@ -1390,7 +1466,14 @@ Theorem combined_strong_progress :
   (forall t, value t \/ (exists t', t --> t'))
   \/ ~ (forall t, value t \/ (exists t', t --> t')).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  right.
+  intro H. assert (v := 1).
+  specialize H with (test (C v) tru fls).
+  destruct H.
+  - inversion H.
+  - destruct H.
+    invert H. invert H4.
+Qed.
 (** [] *)
 
 End Combined.
@@ -1414,6 +1497,12 @@ Inductive aval : aexp -> Prop :=
     values, since they aren't needed in the definition of [-->b]
     below (why?), though they might be if our language were a bit
     more complicated (why?). *)
+
+(* If we define boolean values here, then we will lose strong progress,
+   which is shown above in [combined_strong_progress].
+   If we want to solve this problem, we need "type checking" to ensure
+   that in [if b then c1 else c2 end], [b] is actually a boolean value
+   instead of a number. *)
 
 Reserved Notation " a '/' st '-->a' a' "
                   (at level 40, st at level 39).
@@ -1753,7 +1842,28 @@ Lemma par_body_n__Sn : forall n st,
   st X = n /\ st Y = 0 ->
   par_loop / st -->* par_loop / (X !-> S n ; st).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  unfold par_loop. intros n st [Hx Hy].
+  eapply multi_step.
+  { apply CS_Par2. apply CS_While. }
+  eapply multi_step.
+  { apply CS_Par2. apply CS_IfStep. apply BS_Eq1. apply AS_Id. }
+  eapply multi_step.
+  { apply CS_Par2. apply CS_IfStep. rewrite Hy. apply BS_Eq. }
+  eapply multi_step.
+  { apply CS_Par2. simpl. apply CS_IfTrue. }
+  eapply multi_step.
+  { apply CS_Par2. apply CS_SeqStep. apply CS_AsgnStep. apply AS_Plus1.
+    apply AS_Id. }
+  eapply multi_step.
+  { apply CS_Par2. apply CS_SeqStep. rewrite Hx. apply CS_AsgnStep.
+    apply AS_Plus. }
+  eapply multi_step.
+  { apply CS_Par2. apply CS_SeqStep. apply CS_Asgn. }
+  eapply multi_step.
+  { apply CS_Par2. apply CS_SeqFinish. }
+  replace (n+1) with (S n) by lia.
+  apply multi_refl.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, standard, optional (par_body_n) *)
@@ -1762,7 +1872,20 @@ Lemma par_body_n : forall n st,
   exists st',
     par_loop / st -->*  par_loop / st' /\ st' X = n /\ st' Y = 0.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n st [Hx Hy].
+  unfold par_loop.
+  induction n.
+  - exists st. split; auto. apply multi_refl.
+  - destruct IHn as [st' [IHn [IHx IHy]]].
+    exists (X !-> S n; st').
+    repeat split.
+    + eapply multi_trans.
+      * apply IHn.
+      * apply par_body_n__Sn. intuition.
+    + rewrite t_update_neq.
+      * apply IHy.
+      * intro contra. inversion contra.
+Qed.
 (** [] *)
 
 (** ... the above loop can exit with [X] having any value
@@ -1779,7 +1902,7 @@ Proof.
   - rename x into st.
   inversion H as [H' [HX HY] ]; clear H.
   exists (Y !-> 1 ; st). split.
-    + eapply multi_trans with (par_loop,st).
+    + apply multi_trans with (par_loop,st).
       * apply H'.
       * eapply multi_step.
         -- apply CS_Par1. apply CS_Asgn.
