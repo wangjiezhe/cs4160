@@ -255,8 +255,6 @@ Qed.
 
 Ltac solve_by_inverts' n :=
   match goal with
-  | H : nvalue ?x, H': ?x --> _ |- _ =>
-    pose proof (value_is_nf _ (or_intror H)); exfalso; eauto
   | H : ?T |- _ =>
     match type of T with Prop =>
       solve [
@@ -265,13 +263,25 @@ Ltac solve_by_inverts' n :=
     end
   end.
 
+  Ltac solve_by_inverts'' n :=
+    match goal with
+    | H : nvalue ?x, H': ?x --> _ |- _ =>
+      pose proof (value_is_nf _ (or_intror H)); exfalso; eauto
+    | H : ?T |- _ =>
+      match type of T with Prop =>
+        solve [
+          inversion H;
+          match n with S (S (?n')) => subst; try f_equal; eauto; solve_by_inverts'' (S n') end ]
+      end
+    end.
+
 Theorem step_deterministic:
   deterministic step.
 Proof with eauto.
   unfold deterministic.
   intros x y1 y2 Hy1 Hy2.
   generalize dependent y2.
-  induction Hy1; simpl; intros; try solve_by_inverts' 3.
+  induction Hy1; simpl; intros; try solve_by_inverts'' 3.
   (* - invert Hy2... invert H3.
   - invert Hy2... invert H3.
   - invert Hy2...
@@ -402,7 +412,8 @@ Example succ_hastype_nat__hastype_nat : forall t,
   |-- <{succ t}> \in Nat ->
   |-- t \in Nat.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  induction t; intros H; try solve_by_inverts' 2.
+Qed.
 (** [] *)
 
 (* ----------------------------------------------------------------- *)
@@ -462,7 +473,32 @@ Proof.
     + (* t1 can take a step *)
       destruct H as [t1' H1].
       exists (<{ if t1' then t2 else t3 }>). auto.
-  (* FILL IN HERE *) Admitted.
+  - (* T_Succ *)
+    destruct IHHT.
+    + left. apply (nat_canonical _ HT) in H. auto.
+    + right. destruct H as [t1'].
+      exists <{ succ t1' }>. auto.
+  - (* T_Pred *)
+    destruct IHHT.
+    + right.
+      destruct t1; try solve_by_inverts' 3.
+      (* destruct t1; try solve_by_inverts 2.
+      * exists <{ 0 }>. auto.
+      * apply (nat_canonical _ HT) in H. invert H.
+        exists <{ t1 }>. auto. *)
+    + destruct H as [t1'].
+      right. exists <{ pred t1' }>. auto.
+  - (* T_Iszero *)
+    destruct IHHT.
+    + right.
+      destruct t1; try solve_by_inverts' 3.
+      (* destruct t1; try solve_by_inverts 2.
+      * exists <{ true }>. auto.
+      * apply (nat_canonical _ HT) in H. invert H.
+        exists <{ false }>. auto. *)
+    + right. destruct H as [t1'].
+      exists <{ iszero t1' }>. auto.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (finish_progress_informal)
@@ -527,11 +563,20 @@ Proof.
             cases all at once *)
          try solve_by_invert.
     - (* T_If *) inversion HE; subst; clear HE.
-      + (* ST_IFTrue *) assumption.
+      + (* ST_IfTrue *) assumption.
       + (* ST_IfFalse *) assumption.
       + (* ST_If *) apply T_If; try assumption.
         apply IHHT1; assumption.
-    (* FILL IN HERE *) Admitted.
+    - (* T_Succ *) invert HE. apply T_Succ. apply IHHT. assumption.
+    - (* T_Pred *) invert HE.
+      + assumption.
+      + invert HT. assumption.
+      + apply T_Pred. apply (IHHT _ H0).
+    - (* T_Iszero *)invert HE.
+      + apply T_True.
+      + apply T_False.
+      + apply T_Iszero. apply (IHHT _ H0).
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (finish_preservation_informal)
@@ -582,7 +627,10 @@ Theorem preservation' : forall t t' T,
   t --> t' ->
   |-- t' \in T.
 Proof with eauto.
-  (* FILL IN HERE *) Admitted.
+  intros t t' T HT HE.
+  generalize dependent T.
+  induction HE; intros T HT; try solve_by_inverts' 3.
+Qed.
 (** [] *)
 
 (** The preservation theorem is often called _subject reduction_,
@@ -623,7 +671,10 @@ Qed.
     and [|-- t' \in T], then [|-- t \in T]?  If so, prove it.  If
     not, give a counter-example.
 
-    (* FILL IN HERE *)
+    counter-example:
+    t = <{ if true then true else 1 }>
+    t' = true
+    T = Bool
 *)
 
 Theorem subject_expansion:
@@ -631,7 +682,14 @@ Theorem subject_expansion:
   \/
   ~ (forall t t' T, t --> t' /\ |-- t' \in T -> |-- t \in T).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  right. intros H.
+  assert (<{ if true then true else 0}> --> <{ true }>) as HE.
+  { apply ST_IfTrue. }
+  assert (|-- <{true}> \in Bool) as HT'.
+  { apply T_True. }
+  pose proof (H _ _ _ (conj HE HT')) as HT.
+  inversion HT. inversion H6.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard (variation1)
@@ -647,11 +705,13 @@ Proof.
    else "becomes false." If a property becomes false, give a
    counterexample.
       - Determinism of [step]
-            (* FILL IN HERE *)
+            remains true
       - Progress
-            (* FILL IN HERE *)
+            becomes false, counterexample:
+            <{ if (succ true) then true else false }> is not a value, and
+            can take no steps.
       - Preservation
-            (* FILL IN HERE *)
+            remains true
 *)
 (* Do not modify the following line: *)
 Definition manual_grade_for_variation1 : option (nat*string) := None.
@@ -666,7 +726,10 @@ Definition manual_grade_for_variation1 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
-            (* FILL IN HERE *)
+
+   Determinism of [step] becomes false, counterexample:
+   <{ if true then true else false }> --> <{ true }> (ST_IfTrue)
+   <{ if true then true else false }> --> <{ false }> (ST_Funny1)
 *)
 (* Do not modify the following line: *)
 Definition manual_grade_for_variation2 : option (nat*string) := None.
@@ -682,7 +745,12 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
-            (* FILL IN HERE *)
+
+   Determinism of [step] becomes false, counterexample:
+   <{ if true then (if false then true else false) else false }>
+       --> <{ if false then true else false }> (ST_IfTrue)
+   <{ if true then (if false then true else false) else false }>
+       --> <{ if true then false else false }> (ST_Funny2)
 *)
 (** [] *)
 
@@ -695,7 +763,8 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
-(* FILL IN HERE *)
+
+   all remains true
 *)
 (** [] *)
 
@@ -708,7 +777,10 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
-(* FILL IN HERE *)
+
+   progress becomes false, counterexample:
+   |-- <{ 0 }> \in Bool
+   <{ if 0 then true else false }> is not a value, and can take no steps
 *)
 (** [] *)
 
@@ -721,7 +793,15 @@ Definition manual_grade_for_variation2 : option (nat*string) := None.
 
    Which of the above properties become false in the presence of
    this rule?  For each one that does, give a counter-example.
-(* FILL IN HERE *)
+
+   progress becomes false, counterexample:
+   |-- <{ pred 0 }> \in Bool
+   <{ if (pred 0) then true else false }> is not a value, and can take no steps
+
+   preservation becomes false, counterexample:
+   |-- <{ pred 0 }> \in Bool
+   <{ pred 0 }> --> <{ 0 }>
+   but (|-- { 0 } \in Bool) is not true.
 *)
 (** [] *)
 
