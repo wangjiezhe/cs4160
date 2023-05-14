@@ -163,8 +163,8 @@ Inductive ty : Type :=
 
 Inductive tm : Type :=
   | tm_var   : string -> tm
-  | tm_app   : tm -> tm -> tm
-  | tm_abs   : string -> ty -> tm -> tm
+  | tm_app   : tm -> tm -> tm               (* apply *)
+  | tm_abs   : string -> ty -> tm -> tm     (* abstraction*)
   | tm_true  : tm
   | tm_false : tm
   | tm_if    : tm -> tm -> tm -> tm.
@@ -460,7 +460,29 @@ Check <{[x:=true] x}>.
 Inductive substi (s : tm) (x : string) : tm -> tm -> Prop :=
   | s_var1 :
       substi s x (tm_var x) s
-  (* FILL IN HERE *)
+  | s_var2 :
+      forall y, x <> y -> substi s x (tm_var y) (tm_var y)
+  | s_abs1 :
+      forall T t, substi s x (tm_abs x T t) (tm_abs x T t)
+  | s_abs2 :
+      forall y T t t', x <> y ->
+      substi s x t t' ->
+      substi s x (tm_abs y T t) (tm_abs y T t')
+  | s_app :
+      forall t1 t1' t2 t2',
+      substi s x t1 t1' ->
+      substi s x t2 t2' ->
+      substi s x (tm_app t1 t2) (tm_app t1' t2')
+  | s_true :
+      substi s x tm_true tm_true
+  | s_false :
+      substi s x tm_false tm_false
+  | s_if :
+      forall t1 t1' t2 t2' t3 t3',
+      substi s x t1 t1' ->
+      substi s x t2 t2' ->
+      substi s x t3 t3' ->
+      substi s x (tm_if t1 t2 t3) (tm_if t1' t2' t3')
 .
 
 Hint Constructors substi : core.
@@ -468,7 +490,22 @@ Hint Constructors substi : core.
 Theorem substi_correct : forall s x t t',
   <{ [x:=s]t }> = t' <-> substi s x t t'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros s x t t'. split.
+  - generalize dependent t'.
+    induction t as [y | | y | | | ]; intros;
+      subst; simpl;
+      try (destruct (String.eqb_spec x y); subst); auto.
+  - intros H.
+    induction H; subst; simpl;
+      try (rewrite String.eqb_refl);
+      try (rewrite <- String.eqb_neq in H; rewrite H);
+      auto.
+    (* + rewrite String.eqb_refl. reflexivity.
+    + rewrite <- String.eqb_neq in H. rewrite H. reflexivity.
+    + rewrite String.eqb_refl. reflexivity.
+    + rewrite <- String.eqb_neq in H. rewrite H.
+      subst. reflexivity. *)
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -487,7 +524,7 @@ Proof.
 
     is traditionally called _beta-reduction_. *)
 
-(** 
+(**
                                value v2
                      ---------------------------                     (ST_AppAbs)
                      (\x:T2,t1) v2 --> [x:=v2]t1
@@ -700,7 +737,7 @@ Definition context := partial_map ty.
 (* ================================================================= *)
 (** ** Typing Relation *)
 
-(** 
+(**
                               Gamma x = T1
                             ------------------                           (T_Var)
                             Gamma |-- x \in T1
@@ -803,7 +840,7 @@ Proof.
 
     Formally prove the following typing derivation holds:
 
-    
+
        empty |-- \x:Bool->B, \y:Bool->Bool, \z:Bool,
                    y (x z)
              \in T.
