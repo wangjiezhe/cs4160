@@ -838,9 +838,9 @@ Example typing_example_2_full :
     (Bool -> (Bool -> Bool) -> Bool).
 Proof.
   apply T_Abs. apply T_Abs.
-  apply T_App with Ty_Bool.
+  apply T_App with <{Bool}>.
   - apply T_Var. apply update_eq.
-  - apply T_App with Ty_Bool.
+  - apply T_App with <{Bool}>.
     + apply T_Var. apply update_eq.
     + apply T_Var. rewrite update_neq.
       * apply update_eq.

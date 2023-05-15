@@ -146,7 +146,19 @@ Theorem progress' : forall t T,
 Proof.
   intros t.
   induction t; intros T Ht; auto.
-  (* FILL IN HERE *) Admitted.
+  - inversion_clear Ht. discriminate H.
+  - right. inversion_clear Ht.
+    destruct (IHt1 _ H).
+    + destruct (IHt2 _ H0).
+      * destruct (canonical_forms_fun _ _ _ H H1) as [x [u Ht1]].
+        subst. eauto.
+      * destruct H2. eauto.
+    + destruct H1. eauto.
+  - right. inversion_clear Ht.
+    destruct (IHt1 _ H).
+    + destruct (canonical_forms_bool _ H H2); subst; eauto.
+    + destruct H2; eauto.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -207,6 +219,7 @@ Lemma weakening_empty : forall Gamma t T,
 Proof.
   intros Gamma t T.
   eapply weakening.
+  (* unfold includedin. intros. discriminate H. *)
   discriminate.
 Qed.
 
@@ -334,7 +347,17 @@ Proof.
   remember (x |-> U; Gamma) as Gamma'.
   generalize dependent Gamma.
   induction Ht; intros Gamma' G; simpl; eauto.
- (* FILL IN HERE *) Admitted.
+  - rename x0 into y, T1 into T.
+    destruct (String.eqb_spec x y); subst.
+    + rewrite update_eq in H.
+      invert H. apply weakening_empty. assumption.
+    + rewrite update_neq in H by (exact n).
+      apply T_Var. assumption.
+  - rename x0 into y.
+    destruct (String.eqb_spec x y); subst; apply T_Abs.
+    + rewrite update_shadow in Ht. assumption.
+    + apply IHHt. apply update_permute. assumption.
+Qed.
 (** [] *)
 
 (* ================================================================= *)
@@ -448,7 +471,9 @@ Proof.
   intros t t' T Hhas_type Hmulti. unfold stuck.
   intros [Hnf Hnot_val]. unfold normal_form in Hnf.
   induction Hmulti.
-  (* FILL IN HERE *) Admitted.
+  - destruct (progress _ _ Hhas_type); contradiction.
+  - apply (IHHmulti (preservation _ _ _ Hhas_type H) Hnf Hnot_val).
+Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -464,7 +489,16 @@ Theorem unique_types : forall Gamma e T T',
   Gamma |-- e \in T' ->
   T = T'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros Gamma e T T' HT.
+  generalize dependent T'.
+  induction HT; intros T' HT';
+    inversion_clear HT'; auto.
+  - rewrite H0 in H.
+    injection H; auto.
+  - f_equal. auto.
+  - apply IHHT1 in H.
+    injection H; auto.
+Qed.
 (** [] *)
 
 (* ################################################################# *)
