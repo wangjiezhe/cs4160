@@ -699,13 +699,17 @@ Lemma step_example5 :
        <{idBBBB idBB idB}>
   -->* idB.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  eapply multi_step.
+  { apply ST_App1. apply ST_AppAbs. apply v_abs. }
+  simpl. eapply multi_step.
+  { apply ST_AppAbs. apply v_abs. }
+  simpl. apply multi_refl.
+Qed.
 
 Lemma step_example5_with_normalize :
        <{idBBBB idBB idB}>
   -->* idB.
-Proof.
-  (* FILL IN HERE *) Admitted.
+Proof. normalize. Qed.
 (** [] *)
 
 (* ################################################################# *)
@@ -767,7 +771,7 @@ Definition context := partial_map ty.
 Reserved Notation "Gamma '|--' t '\in' T"
             (at level 101,
              t custom stlc, T custom stlc at level 0).
- Print Grammar constr.
+Print Grammar constr.
 Inductive has_type : context -> tm -> ty -> Prop :=
   | T_Var : forall Gamma x T1,
       Gamma x = Some T1 ->
@@ -833,13 +837,20 @@ Example typing_example_2_full :
           (y (y x)) \in
     (Bool -> (Bool -> Bool) -> Bool).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  apply T_Abs. apply T_Abs.
+  apply T_App with Ty_Bool.
+  - apply T_Var. apply update_eq.
+  - apply T_App with Ty_Bool.
+    + apply T_Var. apply update_eq.
+    + apply T_Var. rewrite update_neq.
+      * apply update_eq.
+      * intro H. inversion H.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard (typing_example_3)
 
     Formally prove the following typing derivation holds:
-
 
        empty |-- \x:Bool->B, \y:Bool->Bool, \z:Bool,
                    y (x z)
@@ -855,7 +866,20 @@ Example typing_example_3 :
                (y (x z)) \in
       T.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  eexists.
+  apply T_Abs. apply T_Abs. apply T_Abs.
+  eapply T_App.
+  - apply T_Var.
+    rewrite update_neq by (intro H; discriminate H).
+    apply update_eq.
+  - eapply T_App.
+    + apply T_Var.
+      rewrite update_neq by (intro H; discriminate H).
+      rewrite update_neq by (intro H; discriminate H).
+      apply update_eq.
+    + apply T_Var.
+      apply update_eq.
+Qed.
 (** [] *)
 
 (** We can also show that some terms are _not_ typable.  For example,
@@ -897,7 +921,17 @@ Example typing_nonexample_3 :
         empty |--
           \x:S, x x \in T).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros H. destruct H as [S [T H]].
+  invert H.
+  invert H5.
+  invert H2.
+  invert H4.
+  rewrite H1 in H2. clear H1.
+  invert H2.
+  induction T2.
+  - invert H0.
+  - invert H0. apply (IHT2_1 H1).
+Qed.
 (** [] *)
 
 End STLC.
