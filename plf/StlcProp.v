@@ -440,13 +440,19 @@ Qed.
     Show this by giving a counter-example that does _not involve
     conditionals_. *)
 
-(* FILL IN HERE *)
-
 Theorem not_subject_expansion:
   exists t t' T, t --> t' /\ (empty |-- t' \in T) /\ ~ (empty |-- t \in T).
 Proof.
   (* Write "exists <{ ... }>" to use STLC notation. *)
-  (* FILL IN HERE *) Admitted.
+  exists <{(\z:Bool->Bool, \y:Bool, y) (\x:Bool, x x)}>,
+         <{\y:Bool, y}>,
+         <{Bool->Bool}>.
+  repeat split; auto.
+  intro H.
+  inversion_clear H.
+  apply typing_nonexample_3.
+  exists <{Bool}>, T2. assumption.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_subject_expansion_stlc : option (nat*string) := None.
@@ -574,7 +580,35 @@ Definition closed (t:tm) :=
     crucial to understanding substitution and its properties, which
     are really the crux of the lambda-calculus. *)
 
-(* FILL IN HERE *)
+(*
+             -------------------                  (afi_var)
+             x appears free in x
+
+             x appears free in t1
+           -------------------------              (afi_app1)
+           x appears free in (t1 t2)
+
+             x appears free in t2
+           -------------------------              (afi_app2)
+           x appears free in (t1 t2)
+
+                   y <> x
+              x appears free in t
+           -------------------------              (afi_abs)
+           x appears free in \y:T, t
+
+             x appears free in t1
+    -----------------------------------------     (afi_if1)
+    x appears free in (if t1 then t2 else t3)
+
+             x appears free in t2
+    -----------------------------------------     (afi_if2)
+    x appears free in (if t1 then t2 else t3)
+
+             x appears free in t3
+    -----------------------------------------     (afi_if3)
+    x appears free in (if t1 then t2 else t3)
+*)
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_afi : option (nat*string) := None.
@@ -627,7 +661,11 @@ Proof.
   generalize dependent T.
   induction H as [| | |y T1 t1 H H0 IHappears_free_in| | |];
          intros; try solve [inversion H0; eauto].
-  (* FILL IN HERE *) Admitted.
+  inversion_clear H1.
+  destruct (IHappears_free_in _ _ H2) as [T2].
+  rewrite update_neq in H1 by assumption.
+  eauto.
+Qed.
 (** [] *)
 
 (** From the [free_in_context] lemma, it immediately follows that any
@@ -639,7 +677,10 @@ Corollary typable_empty__closed : forall t T,
     empty |-- t \in T  ->
     closed t.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros t T HT x Hafi.
+  destruct (free_in_context _ _ _ _ Hafi HT) as [y H].
+  inversion H.
+Qed.
 (** [] *)
 
 (** Finally, we establish _context_invariance_.  It is useful in cases
@@ -701,12 +742,43 @@ Proof.
   intros.
   generalize dependent Gamma'.
   induction H as [| ? x0 ????? | | | |]; intros; auto.
-  (* FILL IN HERE *) Admitted.
+  - specialize H0 with (x:=x0) (1:=afi_var x0).
+    rewrite H0 in H. auto.
+  - apply T_Abs. eauto.
+    apply IHhas_type. intros x1 Hafi.
+    destruct (String.eqb_spec x0 x1); subst.
+    + repeat rewrite update_eq. reflexivity.
+    + repeat rewrite update_neq by auto. auto.
+  - eapply T_App; eauto.
+Qed.
 (** [] *)
 
 (** The context invariance lemma can actually be used in place of the
     weakening lemma to prove the crucial substitution lemma stated
     earlier. *)
+
+Lemma substitution_preserves_typing' : forall Gamma x U t v T,
+  x |-> U ; Gamma |-- t \in T ->
+  empty |-- v \in U   ->
+  Gamma |-- [x:=v]t \in T.
+Proof.
+  intros Gamma x U t v T Ht Hv.
+  remember (x |-> U; Gamma) as Gamma'.
+  generalize dependent Gamma.
+  induction Ht; intros Gamma' G; simpl; eauto.
+  - rename x0 into y, T1 into T.
+    destruct (String.eqb_spec x y); subst.
+    + rewrite update_eq in H.
+      invert H.
+      apply (context_invariance _ _ _ _ Hv).
+      intros. exfalso.
+      apply (typable_empty__closed _ _ Hv _ H).
+    + rewrite update_neq in H by (exact n). auto.
+  - rename x0 into y.
+    destruct (String.eqb_spec x y); subst; apply T_Abs.
+    + rewrite update_shadow in Ht. assumption.
+    + apply IHHt. apply update_permute. assumption.
+Qed.
 
 (* ################################################################# *)
 (** * Additional Exercises *)
@@ -718,7 +790,19 @@ Proof.
     preservation theorems for the simply typed lambda-calculus (as Coq
     theorems).  You can write [Admitted] for the proofs. *)
 
-(* FILL IN HERE *)
+Theorem progress_exercise : forall t T,
+  empty |-- t \in T ->
+  value t \/ exists t', t --> t'.
+Admitted.
+
+Theorem preservation_exercise : forall t t' T,
+  empty |-- t \in T ->
+  t --> t' ->
+  empty |-- t' \in T.
+Admitted.
+
+Check progress.
+Check preservation.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_progress_preservation_statement : option (nat*string) := None.
@@ -742,11 +826,13 @@ and the following typing rule:
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+        becomes false, counterexample:
+        (\x:Bool, x) true --> true (ST_AppAbs)
+        (\x:Bool, x) true --> zap (ST_Zap)
       - Progress
-(* FILL IN HERE *)
+        remains true
       - Preservation
-(* FILL IN HERE *)
+        remains true
 *)
 
 (* Do not modify the following line: *)
@@ -770,11 +856,15 @@ Definition manual_grade_for_stlc_variation1 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+        becomes false, counterexample:
+        (\x:Bool, x) false --> false (ST_AppAbs)
+        (\x:Bool, x) true --> foo (ST_Foo1)
       - Progress
-(* FILL IN HERE *)
+        remains true
       - Preservation
-(* FILL IN HERE *)
+        empty |-- (\x:Bool, x) in Bool->Bool
+        (\x:Bool, x) --> foo
+        but ~ (empty |-- foo in Bool->Bool)
 *)
 
 (* Do not modify the following line: *)
@@ -790,11 +880,13 @@ Definition manual_grade_for_stlc_variation2 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+        remains true
       - Progress
-(* FILL IN HERE *)
+        becomes false, counterexample:
+        ((\x:Bool, x) (\y:Bool, y)) true
+        is not a value, and can take no steps.
       - Preservation
-(* FILL IN HERE *)
+        remains true
 *)
 
 (* Do not modify the following line: *)
@@ -815,11 +907,16 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+        becomes false, counterexample:
+        (if true then false else false) --> false (ST_If)
+        (if true then false else false) --> true (ST_FunnyIfTrue)
       - Progress
-(* FILL IN HERE *)
+        remains true
       - Preservation
-(* FILL IN HERE *)
+        becomes false, counterexample:
+        empyt |-- (if true then (\x:Bool, x) else (\x:Bool, false)) true \in Bool
+        (if true then (\x:Bool, x) else (\x:Bool, false)) true --> true true
+        but ~ (empty |-- true true \in Bool)
 *)
 (** [] *)
 
@@ -839,10 +936,15 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+        remains true
       - Progress
-(* FILL IN HERE *)
+        remains true
       - Preservation
+        becomes false, counterexample:
+        empty |-- (\x:Bool, \y:Bool, x) true \in Bool
+        (\x:Bool, \y:Bool, x) true --> \y:Bool, true
+        but ~ (empty |-- \y:Bool, true \in Bool)
+        actually, empty |-- \y:Bool, true \in Bool->Bool
 (* FILL IN HERE *)
 *)
 (** [] *)
@@ -863,11 +965,13 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+        remains true
       - Progress
-(* FILL IN HERE *)
+        becomes false, counterexample:
+        empty |-- (true true) in \Bool
+        but (true true) is not a value, and can take no steps
       - Preservation
-(* FILL IN HERE *)
+        remains true
 *)
 (** [] *)
 
@@ -885,11 +989,13 @@ Definition manual_grade_for_stlc_variation3 : option (nat*string) := None.
     false, give a counterexample.
 
       - Determinism of [step]
-(* FILL IN HERE *)
+        remains true
       - Progress
-(* FILL IN HERE *)
+        remains true
       - Preservation
-(* FILL IN HERE *)
+        remains true
+
+    but unique_types is violated.
 *)
 (** [] *)
 
