@@ -2285,7 +2285,13 @@ Proof.
   exists x, t1. reflexivity.
 Qed.
 
-From Coq Require Import Arith.PeanoNat.
+Lemma eq0_dec : forall n,
+  n = 0 \/ n <> 0.
+Proof.
+  intros [].
+  - left. reflexivity.
+  - right. discriminate.
+Qed.
 
 Theorem progress : forall t T,
   empty |-- t \in T ->
@@ -2317,7 +2323,7 @@ Proof with eauto.
   - right. inversion_clear Ht.
     destruct (IHt1 _ H).
     + destruct (canonical_forms_const _ H H2); subst.
-      destruct (Nat.eq_dec x0 0); subst; eauto.
+      destruct (eq0_dec x0); subst; eauto.
     + destruct H2; eauto.
 Qed.
 
