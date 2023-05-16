@@ -674,7 +674,32 @@ Set Default Goal Selector "!".
     through to reduce to a normal form (assuming the usual reduction
     rules for arithmetic operations).
 
-    (* FILL IN HERE *)
+    fact 1 = fix F 1,
+    where F = \f. \x. if x=0 then 1 else x * (f (pred x))
+
+      fix (\f. \x. if x=0 then 1 else x * (f (pred x))) 1
+    --> (ST_App1 + ST_FixAbs)
+      [f:=fix F] (\x. if x=0 then 1 else x * (f (pred x))) 1
+    = (\x. if x=0 then 1 else x * (fix F (pred x))) 1
+    --> (ST_AppAbs)
+      [x:=1] (if x=0 then 1 else x * (fix F (pred x)))
+    = if 1=0 then 1 else 1 * (fix F (pred 1))
+    = if false then 1 else 1 * (fix F (pred 1))
+    --> (ST_IfFalse)
+      1 * (fix F (pred 1))
+    = 1 * (fix F 0)
+    = 1 * (fix (\f. \x. if x=0 then 1 else x * (f (pred x))) 0)
+    --> (ST_Mult2 +  ST_App1 + ST_FixAbs)
+      1 * ([f:=fix F] (\x. if x=0 then 1 else x * (f (pred x))) 0)
+    = 1 * ((\x. if x=0 then 1 else x * (fix F (pred x))) 0)
+    --> (ST_Mult2 + ST_AppAbs)
+      1 * ([x:=0] (\x. if x=0 then 1 else x * (fix F (pred x))))
+    = 1 * (if 0=0 then 1 else x * (fix F (pred x)))
+    --> (ST_Mult2 + ST_IfFalse)
+      1 * 1
+    --> (ST_MultNats)
+      1
+
 *)
 (** [] *)
 
@@ -713,6 +738,24 @@ Set Default Goal Selector "!".
 
       even = evenodd.fst
       odd  = evenodd.snd
+*)
+(*
+        even 2 = evenodd.fst 2
+      = (fix (\eo, let e = ... in let o = ... in o in (e o))).fst 2
+      --> (ST_App1 + ST_Fst1 + ST_FixAbs)
+        ([eo:=fix F] (let e = ... in let o = ... in o in (e o))).fst 2
+      = (let e = \n, if n=0 then tru else (fix F).snd (pred n) in
+         let o = \n, if n=0 then fls else (fix F).snd (pred n) in (e, o)).fst 2
+      -->*
+        (\n, if n=0 then tru else (fix F).snd (pred n)) 2
+      = if 2=0 then tru else (fix F).snd (pred 2)
+      = if fls then tru else (fix F).snd 1
+      -->
+        (fix F).snd 1 (= odd 1)
+      -->*
+        (fix F).fst 0
+      -->*
+        tru
 *)
 
 (* ================================================================= *)
@@ -829,35 +872,48 @@ Set Default Goal Selector "!".
     tuple, [{5,6}] is a 2-tuple (morally the same as a pair),
     [{5,6,7}] is a triple, etc.
 
-      {} ----> unit {t1, t2, ..., tn} ----> (t1, trest) where {t2,
-      ..., tn} ----> trest
+      {} ----> unit
+      {t1, t2, ..., tn} ----> (t1, trest)
+                              where {t2, ..., tn} ----> trest
 
     Similarly, we can encode tuple types using nested product types:
 
-      {} ----> Unit {T1, T2, ..., Tn} ----> T1 * TRest where {T2, ...,
-      Tn} ----> TRest
+      {} ----> Unit
+      {T1, T2, ..., Tn} ----> T1 * TRest
+                              where {T2, ..., Tn} ----> TRest
 
     The operation of projecting a field from a tuple can be encoded
     using a sequence of second projections followed by a first
     projection:
 
-      t.0 ----> t.fst t.(n+1) ----> (t.snd).n
+      t.0 ----> t.fst
+      t.(n+1) ----> (t.snd).n
 
     Next, suppose that there is some total ordering on record labels,
     so that we can associate each label with a unique natural number.
     This number is called the _position_ of the label.  For example,
     we might assign positions like this:
 
-      LABEL POSITION a 0 b 1 c 2 ...  ...  bar 1395 ...  ...  foo 4460
-      ...  ...
+      LABEL POSITION
+        a      0
+        b      1
+        c      2
+       ...    ...
+       bar    1395
+       ...    ...
+       foo    4460
+       ...    ...
 
     We use these positions to encode record values as tuples (i.e., as
     nested pairs) by sorting the fields according to their positions.
     For example:
 
-      {a=5,b=6} ----> {5,6} {a=5,c=7} ----> {5,unit,7} {c=7,a=5} ---->
-      {5,unit,7} {c=5,b=3} ----> {unit,3,5} {f=8,c=5,a=7} ---->
-      {7,unit,5,unit,unit,8} {f=8,c=5} ----> {unit,unit,5,unit,unit,8}
+      {a=5,b=6} ----> {5,6}
+      {a=5,c=7} ----> {5,unit,7}
+      {c=7,a=5} ----> {5,unit,7}
+      {c=5,b=3} ----> {unit,3,5}
+      {f=8,c=5,a=7} ----> {7,unit,5,unit,unit,8}
+      {f=8,c=5} ----> {unit,unit,5,unit,unit,8}
 
     Note that each field appears in the position associated with its
     label, that the size of the tuple is determined by the label with
@@ -866,7 +922,8 @@ Set Default Goal Selector "!".
 
     We do exactly the same thing with record types:
 
-      {a:Nat,b:Nat} ----> {Nat,Nat} {c:Nat,a:Nat} ----> {Nat,Unit,Nat}
+      {a:Nat,b:Nat} ----> {Nat,Nat}
+      {c:Nat,a:Nat} ----> {Nat,Unit,Nat}
       {f:Nat,c:Nat} ----> {Unit,Unit,Nat,Unit,Unit,Nat}
 
     Finally, record projection is encoded as a tuple projection from
@@ -1458,7 +1515,7 @@ Proof.
 Example reduces :
   tm_test -->* 5.
 Proof.
-(* 
+(*
   unfold tm_test. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1481,7 +1538,7 @@ Proof. unfold tm_test. eauto 15. (* FILL IN HERE *) Admitted.
 Example reduces :
   tm_test -->* 6.
 Proof.
-(* 
+(*
   unfold tm_test. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1506,7 +1563,7 @@ Proof. unfold tm_test. eauto 15.
 Example reduces :
   tm_test -->* 6.
 Proof.
-(* 
+(*
   unfold tm_test. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1530,7 +1587,7 @@ Proof. unfold tm_test. eauto 15. (* FILL IN HERE *) Admitted.
 Example reduces :
   tm_test -->* 5.
 Proof.
-(* 
+(*
   unfold tm_test. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1561,7 +1618,7 @@ Proof. unfold tm_test. eauto 15. (* FILL IN HERE *) Admitted.
 Example reduces :
   tm_test -->* <{(5, 0)}>.
 Proof.
-(* 
+(*
   unfold tm_test. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1591,7 +1648,7 @@ Proof. unfold tm_test. eauto 20. (* FILL IN HERE *) Admitted.
 Example reduces :
   tm_test -->* 25.
 Proof.
-(* 
+(*
   unfold tm_test. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1623,7 +1680,7 @@ Proof. unfold fact. auto 10. (* FILL IN HERE *) Admitted.
 Example reduces :
   <{fact 4}> -->* 24.
 Proof.
-(* 
+(*
   unfold fact. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1658,7 +1715,7 @@ Example reduces :
   <{map (\a:Nat, succ a) (1 :: 2 :: (nil Nat))}>
   -->* <{2 :: 3 :: (nil Nat)}>.
 Proof.
-(* 
+(*
   unfold map. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1691,7 +1748,7 @@ Proof. unfold equal. auto 10. (* FILL IN HERE *) Admitted.
 Example reduces :
   <{equal 4 4}> -->* 1.
 Proof.
-(* 
+(*
   unfold equal. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1700,7 +1757,7 @@ Proof.
 Example reduces2 :
   <{equal 4 5}> -->* 0.
 Proof.
-(* 
+(*
   unfold equal. normalize.
 *)
 (* FILL IN HERE *) Admitted.
@@ -1738,7 +1795,7 @@ Proof. unfold eotest. eauto 30. (* FILL IN HERE *) Admitted.
 Example reduces :
   eotest -->* <{(0, 1)}>.
 Proof.
-(* 
+(*
   unfold eotest. eauto 10. normalize.
 *)
 (* FILL IN HERE *) Admitted.
