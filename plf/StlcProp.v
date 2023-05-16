@@ -2062,11 +2062,33 @@ Coercion tm_const : nat >-> tm.
 Reserved Notation "'[' x ':=' s ']' t" (in custom stlc at level 20, x constr).
 
 (** **** Exercise: 5 stars, standard (STLCArith.subst) *)
-Fixpoint subst (x : string) (s : tm) (t : tm) : tm
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint subst (x : string) (s : tm) (t : tm) : tm :=
+  match t with
+  | tm_var y =>
+      if String.eqb x y then s else t
+  | <{\y:T, t1}> =>
+      if String.eqb x y then t else <{\y:T, [x:=s] t1}>
+  | <{t1 t2}> =>
+      <{([x:=s] t1) ([x:=s] t2)}>
+  | tm_const y =>
+      tm_const y
+  | <{succ y}> =>
+      <{succ ([x:=s] y)}>
+  | <{pred y}> =>
+      <{pred ([x:=s] y)}>
+  | <{ t1 * t2 }> =>
+      <{ ([x:=s] t1) * ([x:=s] t2) }>
+  | <{if0 t1 then t2 else t3}> =>
+      <{if0 ([x:=s] t1) then ([x:=s] t2) else ([x:=s] t3)}>
+  end
+
+where "'[' x ':=' s ']' t" := (subst x s t) (in custom stlc).
 
 Inductive value : tm -> Prop :=
-  (* FILL IN HERE *)
+  | v_abs : forall x T2 t1,
+      value <{\x:T2, t1}>
+  | v_const : forall n,
+      value (tm_const n)
 .
 
 Hint Constructors value : core.
@@ -2074,7 +2096,43 @@ Hint Constructors value : core.
 Reserved Notation "t '-->' t'" (at level 40).
 
 Inductive step : tm -> tm -> Prop :=
-  (* FILL IN HERE *)
+  | ST_AppAbs : forall x T2 t1 v2,
+      value v2 ->
+      <{(\x:T2, t1) v2}> --> <{ [x:=v2]t1 }>
+  | ST_App1 : forall t1 t1' t2,
+      t1 --> t1' ->
+      <{t1 t2}> --> <{t1' t2}>
+  | ST_App2 : forall v1 t2 t2',
+      value v1 ->
+      t2 --> t2' ->
+      <{v1 t2}> --> <{v1  t2'}>
+  | ST_Succ : forall t1 t1',
+      t1 --> t1' ->
+      <{succ t1}> --> <{succ t1'}>
+  | ST_SuccN : forall n : nat,
+      <{succ n}> --> tm_const (Nat.succ n)
+  | ST_Pred : forall t1 t1',
+      t1 --> t1' ->
+      <{pred t1}> --> <{pred t1'}>
+  | ST_PredN : forall n:nat,
+      <{pred n}> --> tm_const (Nat.pred n)
+  | ST_Mult1 : forall t1 t1' t2,
+      t1 --> t1' ->
+      <{t1 * t2}> --> <{t1' * t2}>
+  | ST_Mult2 : forall t1 t2 t2',
+      t2 --> t2' ->
+      <{t1 * t2}> --> <{t1 * t2'}>
+  | ST_MultN : forall (m n : nat),
+      <{m * n}> --> tm_const (m * n)
+  | ST_If0True : forall t1 t2,
+      <{if0 0 then t1 else t2}> --> t1
+  | ST_If0False : forall n t1 t2,
+      n <> 0 ->
+      <{if0 n then t1 else t2}> --> t2
+  | ST_If0 : forall t1 t1' t2 t3,
+      t1 --> t1' ->
+      <{if0 t1 then t2 else t3}> --> <{if0 t1' then t2 else t3}>
+
 where "t '-->' t'" := (step t t').
 
 Notation multistep := (multi step).
@@ -2085,8 +2143,11 @@ Hint Constructors step : core.
 (* An example *)
 
 Example Nat_step_example : exists t,
-<{(\x: Nat, \y: Nat, x * y ) 3 2 }> -->* t.
-Proof. (* FILL IN HERE *) Admitted.
+  <{(\x: Nat, \y: Nat, x * y ) 3 2 }> -->* t.
+Proof.
+  exists <{6}>.
+  normalize.
+Qed.
 
 (* Typing *)
 
@@ -2095,7 +2156,33 @@ Definition context := partial_map ty.
 Reserved Notation "Gamma '|--' t '\in' T" (at level 101, t custom stlc, T custom stlc at level 0).
 
 Inductive has_type : context -> tm -> ty -> Prop :=
-  (* FILL IN HERE *)
+  | T_Var : forall Gamma x T1,
+      Gamma x = Some T1 ->
+      Gamma |-- x \in T1
+  | T_Abs : forall Gamma x T1 T2 t1,
+      x |-> T2 ; Gamma |-- t1 \in T1 ->
+      Gamma |-- \x:T2, t1 \in (T2 -> T1)
+  | T_App : forall T1 T2 Gamma t1 t2,
+      Gamma |-- t1 \in (T2 -> T1) ->
+      Gamma |-- t2 \in T2 ->
+      Gamma |-- t1 t2 \in T1
+  | T_Const : forall Gamma (n:nat),
+      Gamma |-- n \in Nat
+  | T_Succ : forall Gamma t1,
+      Gamma |-- t1 \in Nat ->
+      Gamma |-- succ t1 \in Nat
+  | T_Pred : forall Gamma t1,
+      Gamma |-- t1 \in Nat ->
+      Gamma |-- pred t1 \in Nat
+  | T_Mult : forall Gamma t1 t2,
+      Gamma |-- t1 \in Nat ->
+      Gamma |-- t2 \in Nat ->
+      Gamma |-- t1 * t2 \in Nat
+  | T_If : forall t1 t2 t3 T1 Gamma,
+      Gamma |-- t1 \in Nat ->
+      Gamma |-- t2 \in T1 ->
+      Gamma |-- t3 \in T1 ->
+      Gamma |-- if0 t1 then t2 else t3 \in T1
 where "Gamma '|--' t '\in' T" := (has_type Gamma t T).
 
 Hint Constructors has_type : core.
@@ -2103,9 +2190,8 @@ Hint Constructors has_type : core.
 (* An example *)
 
 Example Nat_typing_example :
-   empty |-- ( \x: Nat, \y: Nat, x * y ) 3 2 \in Nat.
-Proof.
-  (* FILL IN HERE *) Admitted.
+  empty |-- ( \x: Nat, \y: Nat, x * y ) 3 2 \in Nat.
+Proof. eauto 10. Qed.
 
 (** [] *)
 
@@ -2119,9 +2205,22 @@ Lemma weakening : forall Gamma Gamma' t T,
      includedin Gamma Gamma' ->
      Gamma  |-- t \in T  ->
      Gamma' |-- t \in T.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  intros Gamma Gamma' t T H Ht.
+  generalize dependent Gamma'.
+  induction Ht; eauto using includedin_update.
+Qed.
 
-(* FILL IN HERE *)
+Lemma weakening_empty : forall Gamma t T,
+     empty |-- t \in T  ->
+     Gamma |-- t \in T.
+Proof.
+  intros Gamma t T.
+  eapply weakening.
+  discriminate.
+Qed.
+
+Hint Resolve weakening_empty : core.
 
 (** [] *)
 
@@ -2129,21 +2228,99 @@ Proof. (* FILL IN HERE *) Admitted.
 (* Hint: You will need to define and prove the same helper lemmas we used before *)
 
 (** **** Exercise: 4 stars, standard (STLCArith.preservation) *)
+Lemma substitution_preserves_typing : forall Gamma x U t v T,
+  x |-> U ; Gamma |-- t \in T ->
+  empty |-- v \in U   ->
+  Gamma |-- [x:=v]t \in T.
+Proof.
+  intros Gamma x U t v T Ht Hv.
+  remember (x |-> U; Gamma) as Gamma'.
+  generalize dependent Gamma.
+  induction Ht; intros Gamma' G; simpl; eauto.
+  - destruct (String.eqb_spec x x0); subst.
+    + rewrite update_eq in H; invert H; auto.
+    + rewrite update_neq in H by (exact n); auto.
+  - destruct (String.eqb_spec x x0); subst; apply T_Abs.
+    + rewrite update_shadow in Ht; auto.
+    + auto using update_permute.
+Qed.
+
 Theorem preservation : forall t t' T,
   empty |-- t \in T  ->
   t --> t'  ->
   empty |-- t' \in T.
-Proof with eauto. (* FILL IN HERE *) Admitted.
+Proof with eauto.
+  intros t t' T HT. generalize dependent t'.
+  remember empty as Gamma.
+  induction HT;
+    intros t' HE; subst;
+    try solve [inversion HE; subst; auto].
+  inversion HE; subst...
+  apply substitution_preserves_typing with T2...
+  inversion HT1...
+Qed.
 
 (** [] *)
 
 (* Progress *)
 
 (** **** Exercise: 4 stars, standard (STLCArith.progress) *)
+Lemma canonical_forms_const : forall t,
+  empty |-- t \in Nat ->
+  value t ->
+  exists n, t = tm_const n.
+Proof.
+  intros t HT HVal.
+  destruct HVal; inversion HT; subst.
+  exists n. reflexivity.
+Qed.
+
+Lemma canonical_forms_fun : forall t T1 T2,
+  empty |-- t \in (T1 -> T2) ->
+  value t ->
+  exists x u, t = <{\x:T1, u}>.
+Proof.
+  intros t T1 T2 HT HVal.
+  destruct HVal as [x ? t1| ] ; inversion HT; subst.
+  exists x, t1. reflexivity.
+Qed.
+
+From Coq Require Import Arith.PeanoNat.
+
 Theorem progress : forall t T,
   empty |-- t \in T ->
   value t \/ exists t', t --> t'.
-Proof with eauto. (* FILL IN HERE *) Admitted.
+Proof with eauto.
+  induction t; intros T Ht; auto.
+  - inversion_clear Ht. discriminate H.
+  - right. inversion_clear Ht.
+    destruct (IHt1 _ H).
+    + destruct (IHt2 _ H0).
+      * destruct (canonical_forms_fun _ _ _ H H1) as [x [u Ht1]]; subst; eauto.
+      * destruct H2; eauto.
+    + destruct H1; eauto.
+  - right. inversion_clear Ht.
+    destruct (IHt _ H).
+    + destruct (canonical_forms_const _ H H0); subst; eauto.
+    + destruct H0; eauto.
+  - right. inversion_clear Ht.
+    destruct (IHt _ H).
+    + destruct (canonical_forms_const _ H H0); subst; eauto.
+    + destruct H0; eauto.
+  - right. inversion_clear Ht.
+    destruct (IHt1 _ H).
+    + destruct (IHt2 _ H0).
+      * destruct (canonical_forms_const _ H H1); subst.
+        destruct (canonical_forms_const _ H0 H2); subst; eauto.
+      * destruct H2; eauto.
+    + destruct H1; eauto.
+  - right. inversion_clear Ht.
+    destruct (IHt1 _ H).
+    + destruct (canonical_forms_const _ H H2); subst.
+      destruct (Nat.eq_dec x0 0); subst; eauto.
+    + destruct H2; eauto.
+Qed.
+
 (** [] *)
 
 End STLCArith.
