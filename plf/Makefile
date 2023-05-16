@@ -10,10 +10,11 @@ ALLVFILES := \
 	Smallstep.v SmallstepTest.v \
 	Types.v TypesTest.v \
 	Stlc.v StlcTest.v \
-	StlcProp.v StlcPropTest.v
+	StlcProp.v StlcPropTest.v \
+	MoreStlc.v MoreStlcTest.v
 
-# MoreStlc.v Sub.v Typechecking.v Records.v References.v RecordSub.v
-# MoreStlcTest.v  SubTest.v  TypecheckingTest.v  RecordsTest.v  ReferencesTest.v  RecordSubTest.v
+# Sub.v Typechecking.v Records.v References.v RecordSub.v
+# SubTest.v  TypecheckingTest.v  RecordsTest.v  ReferencesTest.v  RecordSubTest.v
 
 # Norm.v PE.v
 # NormTest.v  PETest.v
