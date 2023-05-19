@@ -12,10 +12,11 @@ ALLVFILES := \
 	Stlc.v StlcTest.v \
 	StlcProp.v StlcPropTest.v \
 	MoreStlc.v MoreStlcTest.v \
-	Typechecking.v TypecheckingTest.v
+	Typechecking.v TypecheckingTest.v \
+	References.v ReferencesTest.v
 
-# Sub.v Records.v References.v RecordSub.v
-# SubTest.v  RecordsTest.v  ReferencesTest.v  RecordSubTest.v
+# Sub.v Records.v RecordSub.v
+# SubTest.v  RecordsTest.v  RecordSubTest.v
 
 # Norm.v PE.v
 # NormTest.v  PETest.v
