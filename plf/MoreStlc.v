@@ -1338,6 +1338,7 @@ Inductive step : tm -> tm -> Prop :=
       t1 --> t1' ->
       <{(t1, t2)}> --> <{(t1', t2)}>
   | ST_Pair2 : forall t1 t2 t2',
+      value t1 ->
       t2 --> t2' ->
       <{(t1, t2)}> --> <{(t1, t2')}>
   | ST_Fst1 : forall t1 t1',

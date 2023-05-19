@@ -674,7 +674,7 @@ Fixpoint stepf (t : tm) : option tm :=
   | <{ (t1, t2) }> =>
     match stepf t1, stepf t2 with
     | Some t1', _ => Some <{ (t1', t2) }>
-    | None, Some t2' => Some <{ (t1, t2') }>
+    | None, Some t2' => assert (valuef t1) (Some <{ (t1, t2') }>)
     | None, None => None
     end
   | <{ t1.fst }> =>
@@ -782,24 +782,53 @@ Proof.
   induction t; simpl; intros t' H;
     auto_stepf H.
  (* The above proof script suffices for the reference solution. *)
- (* FILL IN HERE *) Admitted.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, standard, optional (value_stepf_nf) *)
 (* Now for completeness, another lemma will be useful:
    every value is a normal form for [stepf]. *)
+Ltac auto_stepf' :=
+  repeat match goal with
+  | |- (match ?u with _ => _ end) = _ => destruct u
+  | H : return _ = fail |- _ => inversion H
+  | |- ?x = ?x => reflexivity
+  end.
+
 Lemma value_stepf_nf : forall t,
     value t -> stepf t = None.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros t Hval.
+  induction Hval; simpl; auto_stepf'.
+Qed.
 (** [] *)
+
+Ltac auto_stepf'' :=
+  repeat match goal with
+  | |- (match (stepf ?t) with _ => _ end) = _ =>
+      let e := fresh "e" in
+      destruct (stepf t) eqn:e
+  | |- (match (match (stepf ?t) with _ => _ end) with _ => _ end) = _ =>
+      let e := fresh "e" in
+      destruct (stepf t) eqn:e
+  | H : return _ = fail |- _ => discriminate H
+  | H : fail = return _ |- _ => discriminate H
+  | |- ?x = ?x => reflexivity
+  | H : value ?v, e : stepf ?v = return _ |- _ =>
+      apply value_stepf_nf in H; congruence
+  | H : value ?v |- (assert (valuef ?v) _) = _ =>
+      apply complete_valuef in H; rewrite H; simpl
+  | H : return _ = return _ |- _ => inversion_clear H
+  end.
 
 (** **** Exercise: 2 stars, standard, optional (complete_stepf) *)
 (* Completeness of [stepf]. *)
 Theorem complete_stepf : forall t t',
     t --> t'  ->  stepf t = Some t'.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros t t' Hstp.
+  induction Hstp; try (simpl; auto_stepf''; fail).
+Qed.
 (** [] *)
 
 End StepFunction.
